@@ -15,9 +15,10 @@
 `fetch` function, ready-made middlewares for recurring concerns, and the RFC 9110 status code constants.
 
 Each middleware is published as its own subpath module, so consumers pay only for what they import; the root module
-carries the `Fetch`, `Middleware` and `Problem` types and the `createFetch` assembler.
+carries the `Fetch` and `Middleware` types, the `createFetch` assembler and the status code constants.
 
-The package was migrated from `@metreeca/core/fetch` and `@metreeca/core/http`, which still carry the original modules.
+The package was migrated from `@metreeca/core/fetch` and `@metreeca/core/http`, which have since been removed from
+`@metreeca/core`.
 
 # References
 

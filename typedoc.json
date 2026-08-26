@@ -2,14 +2,13 @@
   "tsconfig": "./tsconfig.build.json",
   "entryPoints": [
     "src/index.ts",
-    "src/status.ts",
-    "src/basic.ts",
-    "src/bearer.ts",
-    "src/headers.ts",
-    "src/success.ts",
-    "src/throttle.ts",
-    "src/timeout.ts",
-    "src/transport.ts"
+    "src/controllers/headers.ts",
+    "src/controllers/success.ts",
+    "src/controllers/throttle.ts",
+    "src/controllers/timeout.ts",
+    "src/controllers/transport.ts",
+    "src/authenticators/basic.ts",
+    "src/authenticators/bearer.ts"
   ],
   "externalSymbolLinkMappings": {
     "@metreeca/core": {
@@ -26,7 +25,12 @@
   "groupOrder": [
     "Variables",
     "Type Aliases",
-    "*"
+    "*",
+    "1xx Codes",
+    "2xx Codes",
+    "3xx Codes",
+    "4xx Codes",
+    "5xx Codes"
   ],
   "useFirstParagraphOfCommentAsSummary": true,
   "favicon": "https://metreeca.com/assets/icon.ico",
