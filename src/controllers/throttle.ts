@@ -64,7 +64,7 @@ import type { Problem } from "./success.js";
  *
  * > [!IMPORTANT]
  * > Retries are driven by the response status, so this middleware is to be declared after any middleware converting
- * > responses into rejections, as {@link controllers/success!success success} does: a failure already reported as a
+ * > responses into rejections, as {@link success!success success} does: a failure already reported as a
  * > {@link Problem} is no longer a response and is relayed to the caller without being retried.
  * >
  * > ```typescript

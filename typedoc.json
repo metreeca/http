@@ -1,15 +1,5 @@
 {
   "tsconfig": "./tsconfig.build.json",
-  "entryPoints": [
-    "src/index.ts",
-    "src/controllers/headers.ts",
-    "src/controllers/success.ts",
-    "src/controllers/throttle.ts",
-    "src/controllers/timeout.ts",
-    "src/controllers/transport.ts",
-    "src/authenticators/basic.ts",
-    "src/authenticators/bearer.ts"
-  ],
   "externalSymbolLinkMappings": {
     "@metreeca/core": {
       "*": "https://metreeca.github.io/core/"

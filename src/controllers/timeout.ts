@@ -76,9 +76,8 @@ const ResponseTimeoutLimit = 2**31-1;
  * its referrer and referrer policy are preserved.
  *
  * > [!NOTE]
- * > `504` is one of the transient statuses {@link controllers/throttle!throttle throttle} retries: declaring this
- * > middleware after it bounds each attempt on its own, while declaring it before bounds the retry sequence as a
- * > whole.
+ * > `504` is one of the transient statuses {@link throttle!throttle throttle} retries: declaring this middleware
+ * > after it bounds each attempt on its own, while declaring it before bounds the retry sequence as a whole.
  *
  * @param limit The maximum number of milliseconds to wait for a response
  *

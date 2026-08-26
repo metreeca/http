@@ -62,8 +62,7 @@ import type { Fetch, Middleware } from "../index.js";
  * > ```
  * >
  * > To impose a field on every exchange, regardless of what the caller supplies, layer a middleware setting it
- * > outright, as {@link authenticators/basic!basic basic} and {@link authenticators/bearer!bearer bearer} do for the
- * > `Authorization` field.
+ * > outright, as {@link basic!basic basic} and {@link bearer!bearer bearer} do for the `Authorization` field.
  *
  * Requests are normalised as {@link https://developer.mozilla.org/docs/Web/API/Request `Request`} objects before the
  * fields are attached, preserving the headers and the options carried by a `Request` input alongside the overrides

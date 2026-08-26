@@ -10,7 +10,6 @@ middleware wraps a fetch implementation, returning a new one with the same signa
 as they flow through, and a chain of them is assembled into a single client to be shared across an application:
 
 - **Drop-in Clients**: every client is a standard `fetch` function, interchangeable with the platform primitive
-- **Focused Composition**: each middleware handles one concern, and a client stacks just the ones it needs
 - **Bundled Middlewares**: recurring concerns come solved and tested, keeping call sites free of boilerplate
 - **Open Customisation**: your own middlewares are written and layered exactly like the bundled ones
 
@@ -72,19 +71,19 @@ again by a further chain.
 
 [@metreeca/http]: https://metreeca.github.io/http/modules/index.html
 
-[@metreeca/http/headers]: https://metreeca.github.io/http/modules/controllers_headers.html
+[@metreeca/http/headers]: https://metreeca.github.io/http/modules/headers.html
 
-[@metreeca/http/success]: https://metreeca.github.io/http/modules/controllers_success.html
+[@metreeca/http/success]: https://metreeca.github.io/http/modules/success.html
 
-[@metreeca/http/throttle]: https://metreeca.github.io/http/modules/controllers_throttle.html
+[@metreeca/http/throttle]: https://metreeca.github.io/http/modules/throttle.html
 
-[@metreeca/http/timeout]: https://metreeca.github.io/http/modules/controllers_timeout.html
+[@metreeca/http/timeout]: https://metreeca.github.io/http/modules/timeout.html
 
-[@metreeca/http/transport]: https://metreeca.github.io/http/modules/controllers_transport.html
+[@metreeca/http/transport]: https://metreeca.github.io/http/modules/transport.html
 
-[@metreeca/http/basic]: https://metreeca.github.io/http/modules/authenticators_basic.html
+[@metreeca/http/basic]: https://metreeca.github.io/http/modules/basic.html
 
-[@metreeca/http/bearer]: https://metreeca.github.io/http/modules/authenticators_bearer.html
+[@metreeca/http/bearer]: https://metreeca.github.io/http/modules/bearer.html
 
 # Support
 
