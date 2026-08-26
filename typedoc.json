@@ -39,6 +39,7 @@
   "navigationLinks": {
     "GitHub": "https://github.com/metreeca/http"
   },
+  "githubPages": false,
   "hideGenerator": true,
   "customFooterHtml": "<a href='https://www.metreeca.com/' style='display: flex; align-items: center; gap: 0.25em'><img src='https://metreeca.com/assets/icon.svg' alt='Metreeca' style='width: 1.25em; height: 1.25em;'/><span>Copyright © 2026 Metreeca</span></a>",
   "headings": {
