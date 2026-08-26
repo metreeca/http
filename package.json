@@ -1,0 +1,67 @@
+{
+  "name": "@metreeca/http",
+  "version": "0.1.0",
+  "description": "Composable TypeScript middleware for the standard fetch API.",
+  "keywords": [
+    "typescript",
+    "http",
+    "fetch",
+    "middleware"
+  ],
+  "homepage": "https://metreeca.github.io/http/",
+  "bugs": {
+    "url": "https://github.com/metreeca/http/issues",
+    "email": "info@metreeca.com"
+  },
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Metreeca",
+    "email": "info@metreeca.com",
+    "url": "https://www.metreeca.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metreeca/http.git"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.js",
+    "./status": "./dist/status.js",
+    "./basic": "./dist/basic.js",
+    "./bearer": "./dist/bearer.js",
+    "./headers": "./dist/headers.js",
+    "./success": "./dist/success.js",
+    "./throttle": "./dist/throttle.js",
+    "./timeout": "./dist/timeout.js",
+    "./transport": "./dist/transport.js"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "clean": "rm -rf dist docs node_modules",
+    "setup": "npm install",
+    "build": "rm -rf dist docs && tsc -p tsconfig.build.json && npx typedoc",
+    "check": "npx vitest --typecheck run",
+    "proof": "npx typedoc && (npx typedoc --watch & npx five-server docs --open)"
+  },
+  "dependencies": {
+    "@metreeca/core": "^0.9.19"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "five-server": "^0.4.5",
+    "typedoc": "^0.28.14",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.13"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true
+  }
+}
