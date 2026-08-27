@@ -181,7 +181,7 @@ export function success(): Middleware {
 
 				const mime = response.headers.get("Content-Type");
 
-				if ( mime?.match(/^text\/plain\b/i) ) {
+				if ( /^text\/plain\b/i.test(mime ?? "") ) {
 
 					return response.text()
 
@@ -209,7 +209,7 @@ export function success(): Middleware {
 
 						});
 
-				} else if ( mime?.match(/[\/+]json\b/i) ) {
+				} else if ( /[\/+]json\b/i.test(mime ?? "") ) {
 
 					return response.json()
 

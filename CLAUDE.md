@@ -39,3 +39,12 @@ The following descriptions must be kept in sync:
 - `package.json`: `description` field
 - `README.md`: first line after badges
 - GitHub repository "About" section
+
+The module listing order must be kept in sync as well:
+
+- `package.json`: `exports` field
+- `README.md`: module table and its link reference definitions
+
+Modules are listed by `src` directory, root module first: `authenticators`, `controllers`, `resolvers`. TypeDoc derives
+its entry points from `exports` and preserves their order (`sortEntryPoints: false`), so this order also drives the
+generated documentation navigation.

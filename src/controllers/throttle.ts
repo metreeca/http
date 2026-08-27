@@ -41,6 +41,7 @@
  */
 
 import { createThrottle } from "@metreeca/core/async";
+import { parseInstant, parseDuration } from "../index.core.js";
 import type { Fetch, Middleware } from "../index.js";
 import type { Problem } from "./success.js";
 
@@ -150,13 +151,11 @@ export function throttle({ attempts = 1, ...options }: Parameters<typeof createT
 
 		function after({ headers }: Response): number { // the delay the response asks for (ms), or 0 if none is stated
 
-			const retry = headers.get("Retry-After") ?? "";
+			const retry = headers.get("Retry-After");
 
-			// delta seconds, falling back to the HTTP date form; NaN or negative unless a delay is stated
+			// delta seconds, falling back to the HTTP date form; 0 unless a delay still to elapse is stated
 
-			const seconds = Number(retry) || (Date.parse(retry)-Date.now())/1000;
-
-			return seconds > 0 ? 1000*seconds : 0;
+			return parseDuration(retry) ?? Math.max(0, (parseInstant(retry) ?? 0)-Date.now());
 
 		}
 

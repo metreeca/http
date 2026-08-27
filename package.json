@@ -27,13 +27,15 @@
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.js",
+    "./basic": "./dist/authenticators/basic.js",
+    "./bearer": "./dist/authenticators/bearer.js",
     "./headers": "./dist/controllers/headers.js",
-    "./success": "./dist/controllers/success.js",
     "./throttle": "./dist/controllers/throttle.js",
     "./timeout": "./dist/controllers/timeout.js",
-    "./transport": "./dist/controllers/transport.js",
-    "./basic": "./dist/authenticators/basic.js",
-    "./bearer": "./dist/authenticators/bearer.js"
+    "./success": "./dist/controllers/success.js",
+    "./monitor": "./dist/controllers/monitor.js",
+    "./cache": "./dist/resolvers/cache/index.js",
+    "./transport": "./dist/resolvers/transport.js"
   },
   "files": [
     "README.md",

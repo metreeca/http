@@ -15,7 +15,7 @@
  */
 
 /**
- * Fetch client assembly and HTTP status codes.
+ * Fetch client assembly, HTTP status codes and value parsing.
  *
  * Provides a composable middleware layer over the standard
  * {@link https://developer.mozilla.org/docs/Web/API/Window/fetch `fetch`} function, with ready-made middlewares for
@@ -28,17 +28,46 @@
  * registered codes in common use defined by later specifications; placeholders reserved without a name and codes
  * registered by narrower protocol extensions are left out and compared as plain numbers.
  *
+ * Parsing helpers turn the textual field values HTTP exchanges are made of into plain JavaScript ones, sparing each
+ * call site the splitting, unquoting and date conversion the field grammars call for. Malformed input is reported as
+ * stated or as missing, never as an error, so the consumer decides how to handle whatever a peer got wrong.
+ *
  * **Usage**
+ *
+ * A named constant stands in for the status code it names:
+ *
+ * ```typescript
+ * import { NotFound } from "@metreeca/http";
+ *
+ * (await fetch("https://api.example.com/data")).status === NotFound; // rather than 404
+ * ```
+ *
+ * A middleware of your own is written as a function wrapping the client it delegates to:
+ *
+ * ```typescript
+ * import { Middleware } from "@metreeca/http";
+ *
+ * const trace: Middleware = fetch => async (input, init) => {
+ *
+ *   const response = await fetch(input, init);
+ *
+ *   console.log(response.status);
+ *
+ *   return response;
+ *
+ * };
+ * ```
+ *
+ * A client is assembled once from the middlewares an application needs and shared wherever an exchange is performed:
  *
  * ```typescript
  * import { createFetch } from "@metreeca/http";
  * import { basic } from "@metreeca/http/basic";
  * import { success } from "@metreeca/http/success";
  *
- * // shared across the application
- *
  * const client = createFetch(
  *   basic("user", "secret"),
+ *   trace,
  *   success()
  * );
  *
@@ -47,13 +76,61 @@
  * const response = await client("https://api.example.com/data");
  * ```
  *
+ * The request accessors report what an exchange states, wherever it is stated, so that a bare target, a `Request` and
+ * a target paired with options are all read alike:
+ *
+ * ```typescript
+ * import { getHeaders, getMethod, getTarget } from "@metreeca/http";
+ *
+ * getMethod("https://api.example.com/data", { method: "post" }); // "POST"
+ * getTarget("https://api.example.com/data#section").href; // "https://api.example.com/data"
+ * getHeaders(new Request("https://api.example.com/data", { headers: { Accept: "text/plain" } })); // Headers
+ * ```
+ *
+ * Numbers, dates and durations are reported as plain numbers and milliseconds:
+ *
+ * ```typescript
+ * import { parseDuration, parseInstant, parseInteger } from "@metreeca/http";
+ *
+ * const { headers } = response; // as fetched above
+ *
+ * // undefined unless the field states a usable value
+ *
+ * parseInteger(headers.get("content-length")); // 1024
+ * parseInstant(headers.get("date")); // milliseconds since the epoch
+ * parseDuration(headers.get("age")); // milliseconds
+ * ```
+ *
+ * Structured values are taken apart along the separators their field grammar uses, one helper per separator: quotes
+ * protect whatever they enclose, a comma splits a list into elements, an equals sign splits a parameter into a name
+ * and a value, and a semicolon splits an item into a value and the parameters qualifying it:
+ *
+ * ```typescript
+ * import { parseItem, parseList, parseParameter, parseQuoted } from "@metreeca/http";
+ *
+ * parseQuoted("\"quoted, value\""); // "quoted, value"
+ * parseList(headers.get("vary")); // [ "accept", "accept-encoding" ]
+ * parseParameter("max-age=60"); // [ "max-age", "60" ]
+ * parseItem(headers.get("content-type"))[1].get("charset"); // "utf-8"
+ * ```
+ *
+ * Composing them reads a field with more structure, and equally one whose grammar this package doesn't cover, with a
+ * parser of your own in place of the second step:
+ *
+ * ```typescript
+ * parseList(headers.get("accept-encoding"))
+ *   .map(element => parseItem(element)); // one value and its parameters per coding
+ *
+ * new Map(parseList(headers.get("cache-control"))
+ *   .map(directive => parseParameter(directive))); // Map { "no-store" => "", "max-age" => "60" }
+ * ```
+ *
  * @module index
  *
  * @see {@link https://fetch.spec.whatwg.org/ WHATWG Fetch Standard}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-5 RFC 9110 § 5 - Fields}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15 RFC 9110 § 15 - Status Codes}
  * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Status MDN - HTTP response status codes}
- * @see {@link https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml IANA HTTP Status Code
- *     Registry}
  */
 
 
@@ -121,7 +198,7 @@ export const Created = 201;
 export const Accepted = 202;
 
 /**
- * The request succeeded, but a transforming intermediary modified the enclosed content.
+ * The request succeeded, but a transforming proxy modified the enclosed content.
  *
  * @group 2xx Codes
  *
@@ -295,7 +372,7 @@ export const Forbidden = 403;
 export const NotFound = 404;
 
 /**
- * The request method is known to the server but not supported by the target resource.
+ * The request method is known by the origin server but not supported by the target resource.
  *
  * @group 4xx Codes
  *
@@ -386,7 +463,7 @@ export const PreconditionFailed = 412;
 export const ContentTooLarge = 413;
 
 /**
- * The target URI is longer than the server is willing to process.
+ * The target URI is longer than the server is willing to interpret.
  *
  * @group 4xx Codes
  *
@@ -406,7 +483,8 @@ export const URITooLong = 414;
 export const UnsupportedMediaType = 415;
 
 /**
- * No range in the `Range` header field overlaps the current extent of the selected representation.
+ * The ranges in the `Range` header field were rejected, none of them being satisfiable for the selected
+ * representation or too many having been requested.
  *
  * @group 4xx Codes
  *
@@ -605,7 +683,9 @@ export type Middleware = (fetch: Fetch) => Fetch
  * To bind a client to an implementation of its own, regardless of the global one, close the chain with
  * {@link transport!transport transport}.
  *
- * @param middlewares The {@link Middleware | middlewares} to be layered over the standard `fetch` function, in request
+ * @group Factories
+ *
+ * @param middlewares The {@link Middleware middlewares} to be layered over the standard `fetch` function, in request
  *     processing order
  *
  * @returns A drop-in replacement for the standard `fetch` function routing every exchange through `middlewares`
@@ -615,3 +695,8 @@ export function createFetch(...middlewares: readonly Middleware[]): Fetch {
 	return middlewares.reduceRight((next, middleware) => middleware(next), fetch);
 
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export * from "./index.core.js"

@@ -38,9 +38,9 @@ import { timeout } from "@metreeca/http/timeout";
 
 const client = createFetch(                // shared across the application
 	bearer(() => session.token),             // Authorization header, resolved per request
-	headers({ Accept: "application/json" }),
-	success(),                               // rejects unless response.ok
-	timeout(5000)                            // gives up on a server that never replies
+	headers({ Accept: "application/json" }), // stated on every request
+	timeout(5000),                           // gives up on a server that never replies
+	success()                                // rejects unless response.ok
 );
 
 const response = await client("https://api.example.com/data");
@@ -59,31 +59,38 @@ again by a further chain.
 > | Module                     | Description                      |
 > |----------------------------|----------------------------------|
 > | [@metreeca/http]           | Client assembly and status codes |
+> | **Request Authentication** |                                  |
+> | [@metreeca/http/basic]     | `Basic` authentication           |
+> | [@metreeca/http/bearer]    | `Bearer` authentication          |
 > | **Exchange Control**       |                                  |
 > | [@metreeca/http/headers]   | Default header fields            |
 > | [@metreeca/http/throttle]  | Adaptive pacing and retries      |
 > | [@metreeca/http/timeout]   | Bounded wait for responses       |
-> | [@metreeca/http/success]   | Response status checking         |
+> | [@metreeca/http/success]   | Uniform failure reporting        |
+> | [@metreeca/http/monitor]   | Exchange reporting               |
+> | **Exchange Resolution**    |                                  |
+> | [@metreeca/http/cache]     | HTTP response caching            |
 > | [@metreeca/http/transport] | Custom fetch transport           |
-> | **Authentication**         |                                  |
-> | [@metreeca/http/basic]     | `Basic` authentication           |
-> | [@metreeca/http/bearer]    | `Bearer` authentication          |
 
 [@metreeca/http]: https://metreeca.github.io/http/modules/index.html
 
-[@metreeca/http/headers]: https://metreeca.github.io/http/modules/headers.html
+[@metreeca/http/basic]: https://metreeca.github.io/http/modules/basic.html
 
-[@metreeca/http/success]: https://metreeca.github.io/http/modules/success.html
+[@metreeca/http/bearer]: https://metreeca.github.io/http/modules/bearer.html
+
+[@metreeca/http/headers]: https://metreeca.github.io/http/modules/headers.html
 
 [@metreeca/http/throttle]: https://metreeca.github.io/http/modules/throttle.html
 
 [@metreeca/http/timeout]: https://metreeca.github.io/http/modules/timeout.html
 
+[@metreeca/http/success]: https://metreeca.github.io/http/modules/success.html
+
+[@metreeca/http/monitor]: https://metreeca.github.io/http/modules/monitor.html
+
+[@metreeca/http/cache]: https://metreeca.github.io/http/modules/cache.html
+
 [@metreeca/http/transport]: https://metreeca.github.io/http/modules/transport.html
-
-[@metreeca/http/basic]: https://metreeca.github.io/http/modules/basic.html
-
-[@metreeca/http/bearer]: https://metreeca.github.io/http/modules/bearer.html
 
 # Support
 

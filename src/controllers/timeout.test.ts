@@ -53,7 +53,7 @@ function hanging(): Mock<Fetch> {
 /**
  * Reports the signal the given mock fetch was handed on its first exchange.
  */
-function submitted(mock: Mock<Fetch>): AbortSignal | null | undefined {
+function submitted(mock: Mock<Fetch>): undefined | null | AbortSignal {
 
 	return mock.mock.calls[0]?.[1]?.signal;
 
@@ -62,7 +62,7 @@ function submitted(mock: Mock<Fetch>): AbortSignal | null | undefined {
 /**
  * Reports the request the given mock fetch was handed on its first exchange, as the transport would build it.
  */
-function relayed(mock: Mock<Fetch>): Request | undefined {
+function relayed(mock: Mock<Fetch>): undefined | Request {
 
 	const call = mock.mock.calls[0];
 
