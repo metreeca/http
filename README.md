@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@metreeca/http)](https://www.npmjs.com/package/@metreeca/http)
 
-Composable TypeScript middleware for the standard fetch API.
+Composable middleware for the standard fetch API.
 
 **@metreeca/http** layers recurring HTTP concerns over the standard
 [`fetch`](https://developer.mozilla.org/docs/Web/API/Window/fetch) function, without introducing a bespoke client API. A

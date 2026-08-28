@@ -1,7 +1,7 @@
 {
   "name": "@metreeca/http",
   "version": "0.1.0",
-  "description": "Composable TypeScript middleware for the standard fetch API.",
+  "description": "Composable middleware for the standard fetch API.",
   "keywords": [
     "typescript",
     "http",
