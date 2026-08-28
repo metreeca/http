@@ -15,7 +15,7 @@
  */
 
 /**
- * Transport middleware.
+ * Custom fetch transport middleware.
  *
  * Routes every exchange through a given {@link Fetch} implementation, in place of the standard function
  * {@link createFetch} would otherwise delegate to.

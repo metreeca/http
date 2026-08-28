@@ -15,7 +15,7 @@
  */
 
 /**
- * Response timeout middleware.
+ * Bounded response wait middleware.
  *
  * Bounds the wait for a response from the wrapped {@link Fetch} implementation, reporting a `504 Gateway Timeout` in
  * place of a response that doesn't arrive in time.

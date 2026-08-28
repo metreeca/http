@@ -15,7 +15,7 @@
  */
 
 /**
- * Rate limiting middleware.
+ * Adaptive pacing and retries middleware.
  *
  * Paces the exchanges routed through the wrapped {@link Fetch} implementation with an adaptive throttle, retrying
  * transient failures as the target directs.

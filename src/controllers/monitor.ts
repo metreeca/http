@@ -15,7 +15,7 @@
  */
 
 /**
- * Exchange monitoring middleware.
+ * Exchange reporting middleware.
  *
  * Reports every exchange a client performs, as it is submitted and as it is answered, so that what the client is
  * doing is observable without the call sites taking care of it.

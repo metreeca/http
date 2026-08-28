@@ -15,7 +15,7 @@
  */
 
 /**
- * Response status middleware.
+ * Uniform failure reporting middleware.
  *
  * Admits only 2xx responses from the wrapped {@link Fetch} implementation, reporting error responses and transport
  * failures alike as {@link Problem | problems}.

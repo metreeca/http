@@ -35,6 +35,7 @@
     "./success": "./dist/controllers/success.js",
     "./monitor": "./dist/controllers/monitor.js",
     "./cache": "./dist/resolvers/cache/index.js",
+    "./protocol": "./dist/resolvers/protocol.js",
     "./transport": "./dist/resolvers/transport.js"
   },
   "files": [

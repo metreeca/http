@@ -15,7 +15,7 @@
  */
 
 /**
- * Fetch client assembly, HTTP status codes and value parsing.
+ * Client assembly and HTTP utilities.
  *
  * Provides a composable middleware layer over the standard
  * {@link https://developer.mozilla.org/docs/Web/API/Window/fetch `fetch`} function, with ready-made middlewares for

@@ -47,30 +47,31 @@ const response = await client("https://api.example.com/data");
 ```
 
 Middlewares are layered in declaration order: requests are processed by the first middleware first and reach the
-standard `fetch` function last, while responses travel back through the chain in reverse. The resulting client is
-itself a standard `fetch` function, so it is handed to anything expecting the platform primitive and is itself wrapped
-again by a further chain.
+standard `fetch` function last, while responses travel back through the chain in reverse. The resulting client is itself
+a standard `fetch` function, so it is handed to anything expecting the platform primitive and is itself wrapped again by
+a further chain.
 
 > [!NOTE]
 >
 > This section introduces the overall organisation; each module documents its own concern in detail in the API
 > reference:
 >
-> | Module                     | Description                      |
-> |----------------------------|----------------------------------|
-> | [@metreeca/http]           | Client assembly and status codes |
-> | **Request Authentication** |                                  |
-> | [@metreeca/http/basic]     | `Basic` authentication           |
-> | [@metreeca/http/bearer]    | `Bearer` authentication          |
-> | **Exchange Control**       |                                  |
-> | [@metreeca/http/headers]   | Default header fields            |
-> | [@metreeca/http/throttle]  | Adaptive pacing and retries      |
-> | [@metreeca/http/timeout]   | Bounded wait for responses       |
-> | [@metreeca/http/success]   | Uniform failure reporting        |
-> | [@metreeca/http/monitor]   | Exchange reporting               |
-> | **Exchange Resolution**    |                                  |
-> | [@metreeca/http/cache]     | HTTP response caching            |
-> | [@metreeca/http/transport] | Custom fetch transport           |
+> | Module                     | Description                        |
+> |----------------------------|------------------------------------|
+> | [@metreeca/http]           | Client assembly and HTTP utilities |
+> | **Request Authentication** |                                    |
+> | [@metreeca/http/basic]     | `Basic` authentication             |
+> | [@metreeca/http/bearer]    | `Bearer` authentication            |
+> | **Exchange Control**       |                                    |
+> | [@metreeca/http/headers]   | Default header fields              |
+> | [@metreeca/http/throttle]  | Adaptive pacing and retries        |
+> | [@metreeca/http/timeout]   | Bounded response wait              |
+> | [@metreeca/http/success]   | Uniform failure reporting          |
+> | [@metreeca/http/monitor]   | Exchange reporting                 |
+> | **Exchange Resolution**    |                                    |
+> | [@metreeca/http/cache]     | HTTP response caching              |
+> | [@metreeca/http/protocol]  | Custom protocol handlers           |
+> | [@metreeca/http/transport] | Custom fetch transport             |
 
 [@metreeca/http]: https://metreeca.github.io/http/modules/index.html
 
@@ -89,6 +90,8 @@ again by a further chain.
 [@metreeca/http/monitor]: https://metreeca.github.io/http/modules/monitor.html
 
 [@metreeca/http/cache]: https://metreeca.github.io/http/modules/cache.html
+
+[@metreeca/http/protocol]: https://metreeca.github.io/http/modules/protocol.html
 
 [@metreeca/http/transport]: https://metreeca.github.io/http/modules/transport.html
 

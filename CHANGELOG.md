@@ -12,6 +12,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `@metreeca/http/cache` RFC 9111 response caching middleware, replaying and revalidating stored responses under the
   freshness the origin server states, invalidating on unsafe exchanges, capping reuse with a `ttl` option, keeping
   selected targets out with a `skip` option and holding entries in memory, in a custom `Store` or in a `Bucket`
+- `@metreeca/http/protocol` custom protocol handler middleware, serving a URI scheme the platform doesn't resolve
+  through a handler supplied by the consumer and relaying every other exchange downstream, so that local and remote
+  content is addressed uniformly by URI through a single client
 - `@metreeca/http/monitor` exchange reporting middleware, relaying exchanges untouched
 - `@metreeca/http` request accessors reporting the method, target and header fields an exchange states, whatever the
   form it is stated in
