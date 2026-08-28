@@ -26,17 +26,13 @@ import { parseDuration, parseInstant, parseList, parseParameter } from "../../in
 import { BadRequest, PartialContent } from "../../index.js";
 import { createBucketStore } from "./bucket.js";
 import { createMemoryStore } from "./memory.js";
+import { glob } from "@metreeca/core/strings";
 
 
 /**
  * The methods an exchange is answered from the store for.
  */
 export const Safe: readonly string[] = [ "GET", "HEAD" ];
-
-/**
- * The wildcards a glob pattern states, alongside the characters a regular expression reads as operators.
- */
-const GlobPattern = /\*\*|[*?]|[.+^${}()|[\]\\]/g;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,21 +198,6 @@ export function skipping(patterns: readonly string[]): (target: string) => boole
 	const skipped = patterns.map(glob);
 
 	return target => skipped.some(pattern => pattern.test(target));
-
-
-	/**
-	 * Compiles a glob pattern into a test on a whole value.
-	 */
-	function glob(pattern: string): RegExp {
-
-		return new RegExp(`^${pattern.replace(GlobPattern, token =>
-			token === "**" ? ".*"
-				: token === "*" ? "[^/]*"
-					: token === "?" ? "[^/]"
-						: `\\${token}`
-		)}$`, "su");
-
-	}
 
 }
 
