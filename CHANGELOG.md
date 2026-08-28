@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unpublished](https://github.com/metreeca/http/compare/v0.1.0...HEAD)
+## [Unpublished](https://github.com/metreeca/http/compare/v0.1.1...HEAD)
+
+## [0.1.1](https://github.com/metreeca/http/releases/tag/v0.1.1) - 2026-08-28
 
 ### Added
 
@@ -25,6 +27,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `@metreeca/http/throttle` reads the `Retry-After` header field through the shared parsing helpers, ignoring a delay
   already elapsed
+
+### Fixed
+
+- the declared `@metreeca/core` floor is raised to `0.9.22`, the version first providing the glob matcher
+  `@metreeca/http/cache` relies on to compile its `skip` patterns
 
 ## [0.1.0](https://github.com/metreeca/http/releases/tag/v0.1.0) - 2026-08-26
 
