@@ -16,7 +16,22 @@
 
 import type { Bucket } from "@metreeca/core/bucket";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import { type Fetch, InternalServerError, NoContent, NotModified, OK, PartialContent } from "../../index.js";
+import {
+	Accepted,
+	Created,
+	type Fetch,
+	Gone,
+	InternalServerError,
+	MovedPermanently,
+	NoContent,
+	NonAuthoritativeInformation,
+	NotFound,
+	NotImplemented,
+	NotModified,
+	OK,
+	PartialContent,
+	ResetContent
+} from "../../index.js";
 import {
 	age,
 	capture,
@@ -621,6 +636,19 @@ describe("cache()", () => {
 
 		});
 
+		it("should assume a given ttl where the origin server states no freshness", async () => {
+
+			const mock = serving(new Response("stored"), new Response("updated"));
+			const client = caching(mock, createMemoryStore(0), 60_000);
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			expect(mock).toHaveBeenCalledOnce();
+
+		});
+
 		it("should relay the exchanges a skipped pattern selects", async () => {
 
 			const mock = serving(fresh(60, "stored"), fresh(60, "updated"));
@@ -1205,6 +1233,55 @@ describe("lifetime()", () => {
 		expect(lifetime(entry({ headers: { "cache-control": "max-age=600" } }), ttl)).toBe(600_000);
 
 	});
+
+	it("should assume the ttl as the freshness lifetime of an entry stating none", async () => {
+
+		expect(lifetime(entry(), 60_000)).toBe(60_000);
+
+	});
+
+	it.each([ "immutable", "public", "private", "s-maxage=600" ])(
+		"should assume the ttl as the freshness lifetime of an entry stating <%s> alone", async control => {
+
+			expect(lifetime(entry({ headers: { "cache-control": control } }), 60_000)).toBe(60_000);
+
+		});
+
+	it.each([ "no-cache", "max-age=0", "must-revalidate", "proxy-revalidate" ])(
+		"should prefer the expiration <%s> states to the ttl", async control => {
+
+			expect(lifetime(entry({ headers: { "cache-control": control } }), 60_000)).toBe(0);
+
+		});
+
+	it("should prefer the expiration `Expires` states to the ttl", async () => {
+
+		const date = new Date(at).toUTCString();
+		const expires = new Date(at-60_000).toUTCString();
+
+		expect(lifetime(entry({ headers: { date, expires } }), 600_000)).toBe(0);
+
+	});
+
+	it("should prefer an unusable `Expires` to the ttl", async () => {
+
+		expect(lifetime(entry({ headers: { expires: "0" } }), 60_000)).toBe(0);
+
+	});
+
+	it.each([ NonAuthoritativeInformation, NoContent, MovedPermanently, NotFound, Gone, NotImplemented ])(
+		"should assume the ttl as the freshness lifetime of a %i entry", async status => {
+
+			expect(lifetime(entry({ status }), 60_000)).toBe(60_000);
+
+		});
+
+	it.each([ Created, Accepted, ResetContent ])(
+		"should report no freshness lifetime for a %i entry stating none", async status => {
+
+			expect(lifetime(entry({ status }), 60_000)).toBe(0);
+
+		});
 
 });
 

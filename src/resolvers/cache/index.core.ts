@@ -23,7 +23,21 @@
 import { isFunction } from "@metreeca/core";
 import type { Bucket } from "@metreeca/core/bucket";
 import { parseDuration, parseInstant, parseList, parseParameter } from "../../index.core.js";
-import { BadRequest, PartialContent } from "../../index.js";
+import {
+	BadRequest,
+	Gone,
+	MethodNotAllowed,
+	MovedPermanently,
+	MultipleChoices,
+	NoContent,
+	NonAuthoritativeInformation,
+	NotFound,
+	NotImplemented,
+	OK,
+	PartialContent,
+	PermanentRedirect,
+	URITooLong
+} from "../../index.js";
 import { createBucketStore } from "./bucket.js";
 import { createMemoryStore } from "./memory.js";
 import { glob } from "@metreeca/core/strings";
@@ -33,6 +47,22 @@ import { glob } from "@metreeca/core/strings";
  * The methods an exchange is answered from the store for.
  */
 export const Safe: readonly string[] = [ "GET", "HEAD" ];
+
+/**
+ * The status codes a freshness lifetime is assumed for where a response states none.
+ *
+ * A response answering with any other status code and stating no expiration of its own is never reused, however long a
+ * freshness the consumer is willing to assume.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15.1 RFC 9110 § 15.1 - Overview of Status Codes}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
+ */
+export const Heuristic: readonly number[] = [
+	OK, NonAuthoritativeInformation, NoContent, PartialContent,
+	MultipleChoices, MovedPermanently, PermanentRedirect,
+	NotFound, MethodNotAllowed, Gone, URITooLong,
+	NotImplemented
+];
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -359,26 +389,45 @@ export function age({ requested, headers }: Entry): number {
 /**
  * Computes the freshness lifetime of an entry.
  *
- * @param entry The entry to be measured
- * @param ttl The cap on the computed lifetime, in milliseconds, removed by a value less than or equal to `0`
+ * Where the origin server states a freshness of its own, that is a `Cache-Control` `no-cache`, `max-age`,
+ * `must-revalidate` or `proxy-revalidate` directive or an `Expires` header field, it governs, capped by `ttl`. Where
+ * it states none, `ttl` supplies one, so that a response the origin server says nothing about is reused for as long
+ * as the consumer is willing to, rather than revalidated on every exchange. Directives stating who may hold a
+ * response rather than for how long, `public`, `private` and `immutable` among them, leave freshness unstated.
  *
- * @returns The time `entry` stays usable from the instant the origin server generated its content, in milliseconds,
- *     capped by `ttl`
+ * A freshness is assumed for the {@link Heuristic} status codes alone, so that an entry stating none under any other
+ * status code is never reused.
+ *
+ * @param entry The entry to be measured
+ * @param ttl The freshness to be assumed where `entry` states none and the cap on the freshness it does state, in
+ *     milliseconds, removed by a value less than or equal to `0`
+ *
+ * @returns The time `entry` stays usable from the instant the origin server generated its content, in milliseconds:
+ *     the freshness it states, capped by `ttl`, or `ttl` itself where it states none under one of the
+ *     {@link Heuristic} status codes, and `0` where it states none under any other
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.1 RFC 9111 § 4.2.1 - Calculating Freshness Lifetime}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
  */
-export function lifetime({ received, headers }: Entry, ttl: number): number {
+export function lifetime({ status, received, headers }: Entry, ttl: number): number {
 
 	const control=new Map(parseList(headers["cache-control"]).map(parseParameter));
+
+	// an expiration is stated where a directive or the field is present, however it parses, so that an origin server
+	// asking for revalidation is never overridden by a freshness the consumer assumes
 
 	// `Expires` states an instant, so its lifetime is measured from the instant the response was generated, as the
 	// origin server states it, falling back to the instant it was received where it states none
 
-	const stated=control.has("no-cache") ? 0
+	const stated=control.has("no-cache") || control.has("must-revalidate") || control.has("proxy-revalidate") ? 0
 		: control.has("max-age") ? parseDuration(control.get("max-age")) ?? 0
-			: Math.max(0, (parseInstant(headers["expires"]) ?? 0)-(parseInstant(headers["date"]) ?? received));
+			: headers["expires"] !== undefined
+				? Math.max(0, (parseInstant(headers["expires"]) ?? 0)-(parseInstant(headers["date"]) ?? received))
+				: undefined;
 
-	return ttl > 0 ? Math.min(stated, ttl) : stated;
+	return stated !== undefined ? (ttl > 0 ? Math.min(stated, ttl) : stated)
+		: Heuristic.includes(status) ? Math.max(0, ttl)
+			: 0;
 
 }
 

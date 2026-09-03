@@ -7,6 +7,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unpublished](https://github.com/metreeca/http/compare/v0.1.1...HEAD)
 
+### Changed
+
+- **BREAKING**: the `@metreeca/http/cache` `ttl` option states a single freshness budget rather than a cap alone,
+  supplying the freshness to assume where a response states none, as permitted by RFC 9111 § 4.2.2, so that a response
+  carrying no expiration is reused instead of revalidated on every exchange; freshness is assumed only for the status
+  codes RFC 9110 § 15.1 defines as heuristically cacheable and only where no `Cache-Control` `no-cache`, `max-age`,
+  `must-revalidate` or `proxy-revalidate` directive and no `Expires` header field is stated, so a stated expiration
+  keeps winning, however short it is
+
 ## [0.1.1](https://github.com/metreeca/http/releases/tag/v0.1.1) - 2026-08-28
 
 ### Added
