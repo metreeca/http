@@ -649,6 +649,31 @@ describe("cache()", () => {
 
 		});
 
+		it("should assume a share of the age a `Last-Modified` reports where no freshness is stated", async () => {
+
+			const modified = new Date(at-600_000).toUTCString();
+
+			const mock = serving(
+				new Response("stored", { headers: { "Last-Modified": modified } }),
+				new Response("updated")
+			);
+
+			const client = caching(mock);
+
+			await client(url);
+
+			vi.advanceTimersByTime(30_000);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			vi.advanceTimersByTime(31_000);
+
+			await expect(text(client(url))).resolves.toBe("updated");
+
+			expect(mock).toHaveBeenCalledTimes(2);
+
+		});
+
 		it("should relay the exchanges a skipped pattern selects", async () => {
 
 			const mock = serving(fresh(60, "stored"), fresh(60, "updated"));
@@ -1282,6 +1307,77 @@ describe("lifetime()", () => {
 			expect(lifetime(entry({ status }), 60_000)).toBe(0);
 
 		});
+
+
+	describe("with a `Last-Modified`", () => {
+
+		const modified = new Date(at-600_000).toUTCString();
+
+		it("should assume a share of the time the content had gone unchanged", async () => {
+
+			expect(lifetime(entry({ headers: { "last-modified": modified } }), 0)).toBe(60_000);
+
+		});
+
+		it("should measure the assumed freshness lifetime from the stated `Date`", async () => {
+
+			const date = new Date(at+400_000).toUTCString();
+
+			expect(lifetime(entry({ headers: { date, "last-modified": modified } }), 0)).toBe(100_000);
+
+		});
+
+		it.each([ "no-cache", "max-age=30", "must-revalidate" ])(
+			"should prefer the expiration <%s> states to the assumed freshness lifetime", async control => {
+
+				expect(lifetime(entry({ headers: { "cache-control": control, "last-modified": modified } }), 0))
+					.toBe(control === "max-age=30" ? 30_000 : 0);
+
+			});
+
+		it("should prefer the expiration `Expires` states to the assumed freshness lifetime", async () => {
+
+			const expires = new Date(at+30_000).toUTCString();
+
+			expect(lifetime(entry({ headers: { expires, "last-modified": modified } }), 0)).toBe(30_000);
+
+		});
+
+		it("should cap the assumed freshness lifetime under the ttl", async () => {
+
+			expect(lifetime(entry({ headers: { "last-modified": modified } }), 30_000)).toBe(30_000);
+
+		});
+
+		it("should prefer the assumed freshness lifetime to a longer ttl", async () => {
+
+			expect(lifetime(entry({ headers: { "last-modified": modified } }), 600_000)).toBe(60_000);
+
+		});
+
+		it.each([ "", "unknown", "0" ])(
+			"should assume the ttl as the freshness lifetime for an unusable <%s>", async unusable => {
+
+				expect(lifetime(entry({ headers: { "last-modified": unusable } }), 60_000)).toBe(60_000);
+
+			});
+
+		it("should report no freshness lifetime for content stated as changed after generation", async () => {
+
+			const ahead = new Date(at+600_000).toUTCString();
+
+			expect(lifetime(entry({ headers: { "last-modified": ahead } }), 60_000)).toBe(0);
+
+		});
+
+		it.each([ Created, Accepted, ResetContent ])(
+			"should report no freshness lifetime for a %i entry", async status => {
+
+				expect(lifetime(entry({ status, headers: { "last-modified": modified } }), 0)).toBe(0);
+
+			});
+
+	});
 
 });
 

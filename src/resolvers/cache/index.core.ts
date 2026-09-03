@@ -64,6 +64,18 @@ export const Heuristic: readonly number[] = [
 	NotImplemented
 ];
 
+/**
+ * The share of the interval a response reports its content as unchanged that it is assumed to stay fresh for.
+ *
+ * A response stating no expiration of its own but reporting when its content last changed is reused for a fraction of
+ * the interval it had already gone unchanged, so that a stable resource is held longer than a churning one and reuse
+ * follows the volatility the origin server does report rather than a lifetime flattened across every resource, as
+ * RFC 9111 § 4.2.2 encourages.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
+ */
+export const Fraction: number = 0.1;
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -389,22 +401,27 @@ export function age({ requested, headers }: Entry): number {
 /**
  * Computes the freshness lifetime of an entry.
  *
- * Where the origin server states a freshness of its own, that is a `Cache-Control` `no-cache`, `max-age`,
- * `must-revalidate` or `proxy-revalidate` directive or an `Expires` header field, it governs, capped by `ttl`. Where
- * it states none, `ttl` supplies one, so that a response the origin server says nothing about is reused for as long
- * as the consumer is willing to, rather than revalidated on every exchange. Directives stating who may hold a
- * response rather than for how long, `public`, `private` and `immutable` among them, leave freshness unstated.
+ * Where the origin server states an expiration of its own, that is a `Cache-Control` `no-cache`, `max-age`,
+ * `must-revalidate` or `proxy-revalidate` directive or an `Expires` header field, it governs, capped by `ttl`. Where it
+ * states none but reports when its content last changed, a {@link Fraction} of the interval it had gone unchanged is
+ * assumed in its place, again capped by `ttl`, so that reuse follows the volatility the origin server does report.
+ * Where it reports neither, `ttl` supplies the freshness, so that a response the origin server says nothing about is
+ * reused for as long as the consumer is willing to, rather than revalidated on every exchange.
  *
- * A freshness is assumed for the {@link Heuristic} status codes alone, so that an entry stating none under any other
- * status code is never reused.
+ * Directives stating who may hold a response rather than for how long, `public`, `private` and `immutable` among them,
+ * leave the expiration unstated, as does a `Last-Modified` field carrying no usable instant.
+ *
+ * A freshness is assumed for the {@link Heuristic} status codes alone, so that an entry stating no expiration under any
+ * other status code is never reused.
  *
  * @param entry The entry to be measured
- * @param ttl The freshness to be assumed where `entry` states none and the cap on the freshness it does state, in
- *     milliseconds, removed by a value less than or equal to `0`
+ * @param ttl The freshness to be assumed where `entry` reports neither an expiration nor a change time and the cap on
+ *     any freshness derived from what it does report, in milliseconds, removed by a value less than or equal to `0`
  *
  * @returns The time `entry` stays usable from the instant the origin server generated its content, in milliseconds:
- *     the freshness it states, capped by `ttl`, or `ttl` itself where it states none under one of the
- *     {@link Heuristic} status codes, and `0` where it states none under any other
+ *     the expiration it states, capped by `ttl`, or, under one of the {@link Heuristic} status codes, a
+ *     {@link Fraction} of the interval its content had gone unchanged, capped by `ttl`, or `ttl` itself where no
+ *     usable `Last-Modified` is reported, and `0` where no expiration is stated under any other status code
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.1 RFC 9111 § 4.2.1 - Calculating Freshness Lifetime}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
@@ -419,14 +436,24 @@ export function lifetime({ status, received, headers }: Entry, ttl: number): num
 	// `Expires` states an instant, so its lifetime is measured from the instant the response was generated, as the
 	// origin server states it, falling back to the instant it was received where it states none
 
+	const date=parseInstant(headers["date"]) ?? received;
+
 	const stated=control.has("no-cache") || control.has("must-revalidate") || control.has("proxy-revalidate") ? 0
 		: control.has("max-age") ? parseDuration(control.get("max-age")) ?? 0
 			: headers["expires"] !== undefined
-				? Math.max(0, (parseInstant(headers["expires"]) ?? 0)-(parseInstant(headers["date"]) ?? received))
+				? Math.max(0, (parseInstant(headers["expires"]) ?? 0)-date)
 				: undefined;
 
+	// `Last-Modified` states an instant, so the interval it went unchanged for is measured up to the instant the
+	// response was generated, as the origin server states it, matching how the lifetime `Expires` states is measured
+
+	const modified=parseInstant(headers["last-modified"]);
+
+	const assumed=modified === undefined ? Math.max(0, ttl)
+		: Math.max(0, (date-modified)*Fraction);
+
 	return stated !== undefined ? (ttl > 0 ? Math.min(stated, ttl) : stated)
-		: Heuristic.includes(status) ? Math.max(0, ttl)
+		: Heuristic.includes(status) ? (ttl > 0 ? Math.min(assumed, ttl) : assumed)
 			: 0;
 
 }

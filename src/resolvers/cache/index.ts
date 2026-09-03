@@ -21,9 +21,9 @@
  * revalidates it against the origin server once that allowance is up, so that content is transferred again only when
  * what is held is known to be outdated.
  *
- * Responsibility is limited to replay and revalidation: reuse is governed by the header fields a response states, and
- * a response stating no freshness is revalidated on every exchange unless the consumer states how long to assume one
- * is worth reusing.
+ * Responsibility is limited to replay and revalidation: reuse is governed by the header fields a response states, and a
+ * response stating no expiration is reused for a share of the interval its content had gone unchanged, or, where it
+ * reports no change time either, for as long as the consumer is willing to assume.
  *
  * Unsafe exchanges are relayed as they are; once one succeeds, the entries for its target and for whatever else the
  * response reports as changed are given up, so that a client that both reads and writes never serves what it has just
@@ -34,11 +34,11 @@
  *
  * Freshness and validation rest on what a response states, that is `Cache-Control` `no-store`, `no-cache`, `max-age`,
  * `must-revalidate` and `proxy-revalidate`, `Expires`, `Vary` and the `ETag` and `Last-Modified` validators. Freshness
- * is never inferred from the content, so a response stating none is revalidated on every exchange unless the consumer
- * states a freshness to assume in its place; directives a request states, `no-cache` and `only-if-cached` among them,
- * are not honoured; a directive granting a shared cache a freedom a private one doesn't have, such as `s-maxage`,
- * plays no part, as each client holds a store of its own, while one asking for revalidation is honoured whoever it
- * addresses.
+ * is never inferred from the content: a response stating none is reused under the volatility its `Last-Modified`
+ * reports, or, where it reports none, under the freshness the consumer assumes in its place. Directives a request
+ * states, `no-cache` and `only-if-cached` among them, are not honoured; a directive granting a shared cache a freedom a
+ * private one doesn't have, such as `s-maxage`, plays no part, as each client holds a store of its own, while one
+ * asking for revalidation is honoured whoever it addresses.
  *
  * Complete responses are the only ones replayed: an exchange stating a `Range`, a partial response and a response
  * setting a cookie are relayed as they stand and never stored, and `GET` and `HEAD` are held apart, so a stored
@@ -98,11 +98,11 @@ export type { Entry, Store } from "./index.core.js";
  * Creates a caching middleware.
  *
  * The generated middleware replays what it holds for a `GET` or `HEAD` exchange while the freshness it is held under
- * lasts, that is the one the origin server stated or, where it stated none, the one the `ttl` option assumes,
- * revalidates it with the stored validators once that time is up, replaying the held content again when
- * the origin server answers `304`, and relays the exchange to the wrapped {@link index!Fetch Fetch} implementation
- * whenever it holds nothing usable, keeping what comes back. A successful mutating request invalidates the entries
- * for its target, so a client that both reads and writes doesn't serve what it has just overwritten.
+ * lasts, that is the one the origin server stated or, where it stated none, the one its `Last-Modified` implies or the
+ * `ttl` option assumes, revalidates it with the stored validators once that time is up, replaying the held content
+ * again when the origin server answers `304`, and relays the exchange to the wrapped {@link index!Fetch Fetch}
+ * implementation whenever it holds nothing usable, keeping what comes back. A successful mutating request invalidates
+ * the entries for its target, so a client that both reads and writes doesn't serve what it has just overwritten.
  *
  * Responses served from the store carry an `Age` header field stating how long the content has been held since the
  * origin server delivered it, so that whoever receives it judges for itself how much of its freshness is left. A
@@ -123,22 +123,27 @@ export type { Entry, Store } from "./index.core.js";
  * unsafe exchange for a skipped target still gives up the entries the response reports as changed.
  *
  * Every numeric option is removed by a value less than or equal to `0`, as the defaults do: entries are then retained
- * for the life of the middleware and freshness stays in the sole control of the origin server.
+ * for the life of the middleware and reuse rests on what the origin server reports alone.
  *
  * The `ttl` option states a single freshness budget, that is how long a response is worth reusing: the origin server
- * overrides it by stating less, and it governs where the origin server states nothing, so that a response carrying no
- * freshness is reused rather than revalidated on every exchange. Freshness is assumed only for the status codes RFC
- * 9110 § 15.1 defines as heuristically cacheable, and only where no `Cache-Control` `no-cache`, `max-age`,
- * `must-revalidate` or `proxy-revalidate` directive and no `Expires` header field is stated: a stated expiration keeps
- * winning, however short it is.
+ * overrides it by stating less, and it governs where the response reports nothing to derive a freshness from, so that a
+ * response carrying no expiration is reused rather than revalidated on every exchange. Freshness is assumed only for
+ * the status codes RFC 9110 § 15.1 defines as heuristically cacheable, and only where no `Cache-Control` `no-cache`,
+ * `max-age`, `must-revalidate` or `proxy-revalidate` directive and no `Expires` header field is stated: a stated
+ * expiration keeps winning, however short it is.
+ *
+ * A response stating no expiration but reporting when its content last changed is reused for a tenth of the interval it
+ * had gone unchanged, so that a resource edited a minute ago is revalidated sooner than one untouched for a year;
+ * `ttl` caps that share as it caps a stated expiration, and supplies the freshness where no usable `Last-Modified` is
+ * reported.
  *
  * @param options The caching options, all optional: with none given, exchanges are cached in memory under the
- *     freshness the origin server states
+ *     freshness the origin server reports
  * @param options.store The {@link Store} or `Bucket` to hold entries in, or the number of entries the default memory
  *     store is to retain, giving up the least recently used beyond that
- * @param options.ttl The freshness to assume where a response states none and the cap on the freshness it does state,
- *     in milliseconds, measured from the instant the origin server generated the content rather than from the instant
- *     it was received
+ * @param options.ttl The freshness to assume where a response reports neither an expiration nor a change time and the
+ *     cap on any freshness derived from what it does report, in milliseconds, measured from the instant the origin
+ *     server generated the content rather than from the instant it was received
  * @param options.skip The glob patterns selecting the targets to be kept out of the cache, one or several, matched
  *     whole against the target URI: `*` and `?` stand for a run of characters and for a single character within a
  *     path segment, `**` for a run of characters across separators; with none given, every eligible target is cached

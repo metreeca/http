@@ -15,6 +15,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   codes RFC 9110 § 15.1 defines as heuristically cacheable and only where no `Cache-Control` `no-cache`, `max-age`,
   `must-revalidate` or `proxy-revalidate` directive and no `Expires` header field is stated, so a stated expiration
   keeps winning, however short it is
+- **BREAKING**: `@metreeca/http/cache` assumes as the freshness of a response stating no expiration a tenth of the
+  interval its `Last-Modified` reports its content as having gone unchanged, as RFC 9111 § 4.2.2 encourages, so that a
+  resource edited a minute ago is revalidated sooner than one untouched for a year rather than both being reused for
+  the same span; the assumed share is capped by `ttl`, which supplies the freshness where no usable `Last-Modified` is
+  reported, and a stated expiration keeps winning over both
 
 ## [0.1.1](https://github.com/metreeca/http/releases/tag/v0.1.1) - 2026-08-28
 
