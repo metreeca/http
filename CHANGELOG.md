@@ -20,6 +20,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   resource edited a minute ago is revalidated sooner than one untouched for a year rather than both being reused for
   the same span; the assumed share is capped by `ttl`, which supplies the freshness where no usable `Last-Modified` is
   reported, and a stated expiration keeps winning over both
+- **BREAKING**: the `@metreeca/http/cache` `Entry` interface carries the URL a stored response was retrieved from and
+  the reason phrase it stated, so a custom `Store` holding entries as structured values rather than as opaque bytes is
+  to keep the two new fields
+- `@metreeca/http/cache` replays a stored response under the URL, status and reason phrase it was retrieved with,
+  clones included, so that a client resolving a relative reference against a replayed response resolves it against the
+  same base a freshly retrieved one states; the `Age` header field stays the one departure from the original exchange
 
 ## [0.1.1](https://github.com/metreeca/http/releases/tag/v0.1.1) - 2026-08-28
 

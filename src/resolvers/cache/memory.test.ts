@@ -32,7 +32,10 @@ describe("createMemoryStore()", () => {
 			requested: 1_000,
 			received: 2_000,
 
+			url: "https://api.example.com/data",
+
 			status: OK,
+			statusText: "OK",
 
 			headers: {},
 			body: new TextEncoder().encode(content)

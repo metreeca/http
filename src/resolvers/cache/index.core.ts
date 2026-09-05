@@ -155,9 +155,22 @@ export interface Entry {
 	readonly received: number;
 
 	/**
+	 * The URL the stored response was retrieved from.
+	 *
+	 * Reports where the exchange finally landed, redirects included, so that a client resolving a relative reference
+	 * against a replayed response resolves it against the same base a freshly retrieved one states.
+	 */
+	readonly url: string;
+
+	/**
 	 * The status code of the stored response.
 	 */
 	readonly status: number;
+
+	/**
+	 * The reason phrase of the stored response.
+	 */
+	readonly statusText: string;
 
 	/**
 	 * The header fields of the stored response, keyed by lowercase field name.
@@ -359,6 +372,9 @@ export function stale(response: Response, target: URL): readonly string[] {
  *
  * Takes a copy of the content, leaving the response itself unread, so that it is reported to the client as it stands.
  *
+ * Records where the exchange finally landed, redirects included, rather than the target it was addressed to, so that a
+ * replayed response states the URL its content was actually retrieved from.
+ *
  * @param response The response to be captured
  * @param requested The time the request was sent, as milliseconds since the epoch
  * @param received The time the response was received, as milliseconds since the epoch
@@ -370,7 +386,9 @@ export async function capture(response: Response, requested: number, received: n
 	return {
 		requested,
 		received,
+		url: response.url,
 		status: response.status,
+		statusText: response.statusText,
 		headers: Object.fromEntries(response.headers),
 		body: new Uint8Array(await response.clone().arrayBuffer())
 	};
@@ -461,22 +479,29 @@ export function lifetime({ status, received, headers }: Entry, ttl: number): num
 /**
  * Replays a stored response, opening a fresh body on every call.
  *
- * States the current age of the entry, superseding the value the origin server stated when it was retrieved, so that a
- * client tells a replayed response apart from a freshly retrieved one.
+ * Restates the response as it was retrieved, its URL, status and reason phrase included, so that a client reading a
+ * replayed response draws the same conclusions it draws from a freshly retrieved one, whether or not the cache
+ * answered the exchange. A clone restates them too, and is refused with a {@link !TypeError TypeError} once the
+ * content has been read, as cloning a retrieved response is.
+ *
+ * The current age of the entry is the one departure: it supersedes the value the origin server stated when the
+ * response was retrieved, so that a client sees how long the content has been held.
  *
  * @param entry The entry to be replayed
  *
- * @returns A response serving the content of `entry` and stating its current age
+ * @returns A response serving the content of `entry` under the URL, status and reason phrase it was retrieved with,
+ *     and stating its current age
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-5.1 RFC 9111 § 5.1 - Age}
  */
 export function replay(entry: Entry): Response {
 
-	const { status, headers, body }=entry;
+	const { url, status, statusText, headers, body }=entry;
 
-	return new Response(body.length === 0 ? null : body, {
+	const response=new Response(body.length === 0 ? null : body, {
 
 		status,
+		statusText,
 
 		headers: [
 
@@ -493,6 +518,28 @@ export function replay(entry: Entry): Response {
 
 	});
 
+	// the retrieval URL is stated on the instance, as a response takes no URL when it is constructed, and cloning is
+	// answered by replaying the entry again, as a clone is built from what the constructor was given and would state
+	// no URL of its own
+
+	return Object.defineProperties(response, {
+
+		url: { value: url },
+
+		clone: {
+
+			value: (): Response => {
+
+				if ( response.bodyUsed ) { throw new TypeError("expected unread response content"); }
+
+				return replay(entry);
+
+			}
+
+		}
+
+	});
+
 }
 
 /**
@@ -500,6 +547,9 @@ export function replay(entry: Entry): Response {
  *
  * A revalidation supersedes the delivery the stored age reported, so the refreshed entry ages from what the `304`
  * states, that is from nothing unless it states an age of its own.
+ *
+ * The URL and the reason phrase the stored response was retrieved with are retained, as a revalidation confirms
+ * content it doesn't retrieve again.
  *
  * @param entry The stale entry the revalidation confirmed
  * @param requested The time the conditional request was sent, as milliseconds since the epoch

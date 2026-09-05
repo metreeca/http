@@ -67,9 +67,15 @@ export function createBucketStore(bucket: Bucket): Store {
  * The metadata is JSON, whose escaping leaves no raw newline in the line, so the first newline byte always marks
  * the start of the content, whatever bytes the content itself carries.
  */
-function encode({ requested, received, status, headers, body, variants }: Entry): ReadableStream<Uint8Array<ArrayBuffer>> {
+function encode({
 
-	return new Blob([`${JSON.stringify({ requested, received, status, headers, variants })}\n`, body]).stream();
+	requested, received, url, status, statusText, headers, body, variants
+
+}: Entry): ReadableStream<Uint8Array<ArrayBuffer>> {
+
+	return new Blob([
+		`${JSON.stringify({ requested, received, url, status, statusText, headers, variants })}\n`, body
+	]).stream();
 
 }
 

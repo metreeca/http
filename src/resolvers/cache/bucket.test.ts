@@ -33,7 +33,10 @@ describe("createBucketStore()", () => {
 			requested: 1_000,
 			received: 2_000,
 
+			url: "https://api.example.com/data",
+
 			status: OK,
+			statusText: "OK",
 
 			headers: { "content-type": "text/plain", ...headers },
 			body: new TextEncoder().encode(content)

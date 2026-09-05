@@ -104,10 +104,11 @@ export type { Entry, Store } from "./index.core.js";
  * implementation whenever it holds nothing usable, keeping what comes back. A successful mutating request invalidates
  * the entries for its target, so a client that both reads and writes doesn't serve what it has just overwritten.
  *
- * Responses served from the store carry an `Age` header field stating how long the content has been held since the
- * origin server delivered it, so that whoever receives it judges for itself how much of its freshness is left. A
- * successful revalidation restarts the age from what the `304` states, as the delivery it confirms supersedes the one
- * the entry was reporting.
+ * A response answered from the store restates the exchange as it was retrieved, its URL, status and reason phrase
+ * included, so that a client reading it draws the same conclusions it draws from a freshly retrieved one. The age is
+ * the one departure: an `Age` header field states how long the content has been held since the origin server delivered
+ * it, so that whoever receives it judges for itself how much of its freshness is left. A successful revalidation
+ * restarts the age from what the `304` states, as the delivery it confirms supersedes the one the entry was reporting.
  *
  * Invalidation gives up every variant held for a target and extends to the URIs named by the `Location` and
  * `Content-Location` header fields of the response, when they share the origin of the target, so that a server reports

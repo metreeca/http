@@ -61,7 +61,7 @@ const url = "https://api.example.com/data";
 
 
 /**
- * Creates an entry, defaulting to one retrieved with no round trip and stating no header field.
+ * Creates an entry, defaulting to one retrieved from `url` with no round trip and stating no header field.
  */
 function entry({
 
@@ -69,6 +69,7 @@ function entry({
 	received = at,
 
 	status = OK,
+	statusText = "",
 
 	headers = {},
 	content = ""
@@ -78,12 +79,13 @@ function entry({
 	readonly requested?: number;
 	readonly received?: number;
 	readonly status?: number;
+	readonly statusText?: string;
 	readonly headers?: Readonly<Record<string, undefined | string>>;
 	readonly content?: string;
 
 } = {}): Entry {
 
-	return { requested, received, status, headers, body: new TextEncoder().encode(content) };
+	return { requested, received, url, status, statusText, headers, body: new TextEncoder().encode(content) };
 
 }
 
@@ -1105,6 +1107,16 @@ describe("stale()", () => {
 
 describe("capture()", () => {
 
+	/**
+	 * Restates a response as retrieved from the given URL, as a constructed response states none.
+	 */
+	function retrieved(response: Response, from: string): Response {
+
+		return Object.defineProperty(response, "url", { value: from });
+
+	}
+
+
 	it("should capture the status, header fields and content of the response", async () => {
 
 		const captured = await capture(new Response("stored", { headers: { ETag: "\"v1\"" } }), at, at);
@@ -1112,6 +1124,22 @@ describe("capture()", () => {
 		expect(captured.status).toBe(OK);
 		expect(captured.headers["etag"]).toBe("\"v1\"");
 		expect(new TextDecoder().decode(captured.body)).toBe("stored");
+
+	});
+
+	it("should record the URL the response was retrieved from", async () => {
+
+		const captured = await capture(retrieved(new Response("stored"), url), at, at);
+
+		expect(captured.url).toBe(url);
+
+	});
+
+	it("should record the reason phrase of the response", async () => {
+
+		const captured = await capture(new Response("stored", { statusText: "Some Reason" }), at, at);
+
+		expect(captured.statusText).toBe("Some Reason");
 
 	});
 
@@ -1410,6 +1438,18 @@ describe("replay()", () => {
 
 	});
 
+	it("should serve the stored reason phrase", async () => {
+
+		expect(replay(entry({ statusText: "Some Reason" })).statusText).toBe("Some Reason");
+
+	});
+
+	it("should state the URL the stored response was retrieved from", async () => {
+
+		expect(replay(entry()).url).toBe(url);
+
+	});
+
 	it("should serve the stored header fields", async () => {
 
 		expect(replay(entry({ headers: { etag: "\"v1\"" } })).headers.get("ETag")).toBe("\"v1\"");
@@ -1438,6 +1478,32 @@ describe("replay()", () => {
 
 	});
 
+	it("should state the retrieval URL on a clone", async () => {
+
+		expect(replay(entry()).clone().url).toBe(url);
+
+	});
+
+	it("should serve the stored content from both a replayed response and its clone", async () => {
+
+		const replayed = replay(entry({ content: "stored" }));
+		const cloned = replayed.clone();
+
+		await expect(text(replayed)).resolves.toBe("stored");
+		await expect(text(cloned)).resolves.toBe("stored");
+
+	});
+
+	it("should refuse to clone a replayed response whose content was read", async () => {
+
+		const replayed = replay(entry({ content: "stored" }));
+
+		await text(replayed);
+
+		expect(() => replayed.clone()).toThrow(TypeError);
+
+	});
+
 });
 
 describe("refresh()", () => {
@@ -1458,6 +1524,15 @@ describe("refresh()", () => {
 
 		expect(refreshed.status).toBe(NoContent);
 		expect(new TextDecoder().decode(refreshed.body)).toBe("stored");
+
+	});
+
+	it("should retain the URL and the reason phrase of the stale entry", async () => {
+
+		const refreshed = refresh(entry({ statusText: "Some Reason" }), at, at, unmodified());
+
+		expect(refreshed.url).toBe(url);
+		expect(refreshed.statusText).toBe("Some Reason");
 
 	});
 
