@@ -84,7 +84,8 @@ const ResponseTimeoutLimit = 2**31-1;
  * @returns A {@link Middleware} wrapping a {@link Fetch} implementation with one bounding the wait for the response of
  *     every exchange
  *
- * @throws {RangeError} If `limit` is not a positive number of milliseconds within the range `setTimeout()` handles
+ * @throws {@link !RangeError RangeError} If `limit` is not a positive number of milliseconds within the range
+ *     `setTimeout()` handles
  *
  * @see {@link https://developer.mozilla.org/docs/Web/API/AbortSignal `AbortSignal`}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15.6.5 RFC 9110 § 15.6.5 - 504 Gateway Timeout}

@@ -83,7 +83,7 @@ import type { Problem } from "./success.js";
  * @returns A {@link Middleware} wrapping a {@link Fetch} implementation with one pacing every exchange and retrying
  *     transient failures
  *
- * @throws {Error} If any option is out of range
+ * @throws {@link !Error Error} If any option is out of range
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-10.2.3 RFC 9110 § 10.2.3 - Retry-After}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15.5 RFC 9110 § 15.5 - Client Error 4xx}

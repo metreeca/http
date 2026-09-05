@@ -83,7 +83,7 @@ const SchemePattern = /^[a-z][a-z\d+.-]*$/;
  * @returns A {@link Middleware} wrapping a {@link Fetch} implementation with one serving through `handler` every
  *     exchange targeting a URL with `scheme`
  *
- * @throws {RangeError} If `scheme` is not a well-formed lowercase URI scheme
+ * @throws {@link !RangeError RangeError} If `scheme` is not a well-formed lowercase URI scheme
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc3986#section-3.1 RFC 3986 § 3.1 - Scheme}
  */

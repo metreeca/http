@@ -83,7 +83,7 @@ import type { Fetch, Middleware } from "../index.js";
  * @returns A {@link Middleware} wrapping a {@link Fetch} implementation with one injecting the fields of `defaults`
  *     the request doesn't already carry
  *
- * @throws {TypeError} If `defaults` is a `HeadersInit` value carrying a malformed field name or value
+ * @throws {@link !TypeError TypeError} If `defaults` is a `HeadersInit` value carrying a malformed field name or value
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-5 RFC 9110 § 5 - Fields}
  */

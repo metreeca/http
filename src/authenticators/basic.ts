@@ -60,7 +60,7 @@ import type { Fetch, Middleware } from "../index.js";
  *
  * @returns A {@link Middleware} wrapping a {@link Fetch} implementation with one authenticating every request as `usr`
  *
- * @throws {RangeError} If `usr` contains a colon
+ * @throws {@link !RangeError RangeError} If `usr` contains a colon
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc7617 RFC 7617 - The 'Basic' HTTP Authentication Scheme}
  */

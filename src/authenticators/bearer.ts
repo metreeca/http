@@ -73,7 +73,8 @@ const Token68Pattern = /^[-A-Za-z0-9._~+\/]+=*$/; // the token68 syntax of RFC 7
  * @returns A {@link Middleware} wrapping a {@link Fetch} implementation with one authenticating every request with
  *     `token`
  *
- * @throws {RangeError} If `token` is a string that doesn't match the `token68` syntax of RFC 7235 § 2.1
+ * @throws {@link !RangeError RangeError} If `token` is a string that doesn't match the `token68` syntax of
+ *     RFC 7235 § 2.1
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc6750 RFC 6750 - The OAuth 2.0 Authorization Framework: Bearer Token
  *     Usage}

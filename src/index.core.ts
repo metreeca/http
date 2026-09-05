@@ -218,7 +218,7 @@ export function getMethod(input: RequestInfo | URL, init?: RequestInit): string 
  *
  * @returns The target URI identifying the resource `input` is addressed to, stripped of any fragment
  *
- * @throws {TypeError} If `input` states a target that is not an absolute URI
+ * @throws {@link !TypeError TypeError} If `input` states a target that is not an absolute URI
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-7.1 RFC 9110 § 7.1 - Determining the Target Resource}
  * @see {@link https://www.rfc-editor.org/rfc/rfc3986#section-3.5 RFC 3986 § 3.5 - Fragment}
