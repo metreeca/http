@@ -7,6 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unpublished](https://github.com/metreeca/http/compare/v0.2.0...HEAD)
 
+### Changed
+
+- Realign to the renamed `@metreeca/core` values module, raising the minimum supported version: `immutable` is imported
+  from `@metreeca/core/values` in place of `@metreeca/core/structures`
+
 ## [0.2.0](https://github.com/metreeca/http/compare/v0.1.1...v0.2.0) - 2026-09-09
 
 ### Changed

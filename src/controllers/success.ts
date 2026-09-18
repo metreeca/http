@@ -46,7 +46,7 @@
  */
 
 import { isError, type Value } from "@metreeca/core";
-import { immutable } from "@metreeca/core/structures";
+import { immutable } from "@metreeca/core/values";
 import type { Fetch, Middleware } from "../index.js";
 
 

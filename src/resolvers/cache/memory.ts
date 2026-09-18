@@ -20,7 +20,7 @@
  * @module
  */
 
-import { immutable } from "@metreeca/core/structures";
+import { immutable } from "@metreeca/core/values";
 import type { Entry, Store } from "./index.core.js";
 
 
