@@ -52,14 +52,14 @@
     "setup": "npm ci && sh package.sh",
     "build": "rm -rf dist docs && tsc -p tsconfig.build.json && npx typedoc",
     "check": "npx vitest --typecheck run",
-    "proof": "npx typedoc && (npx typedoc --watch & npx five-server docs --open)"
+    "proof": "npx typedoc && (npx typedoc --watch & npx wds --root-dir docs --watch --open)"
   },
   "dependencies": {
     "@metreeca/core": "^0.10.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
-    "five-server": "^0.4.5",
+    "@web/dev-server": "^1.0.0",
     "typedoc": "^0.28.14",
     "typescript": "^5.9.3",
     "vitest": "^4.0.13"
