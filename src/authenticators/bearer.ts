@@ -32,8 +32,7 @@
  *
  * @module
  *
- * @see {@link https://www.rfc-editor.org/rfc/rfc6750 RFC 6750 - The OAuth 2.0 Authorization Framework: Bearer Token
- *     Usage}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc6750 RFC 6750 - The OAuth 2.0 Authorization Framework: Bearer Token Usage}
  */
 
 import { isString } from "@metreeca/core";
