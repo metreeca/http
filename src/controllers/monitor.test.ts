@@ -23,16 +23,18 @@ const url = "https://api.example.com/data";
 
 
 /**
- * Creates a logger recording the entries reported to it.
+ * Creates a logger recording the entries and the busy statuses reported to it.
  */
 function recording(): {
+
+	readonly busy: Mock<(status: boolean) => void>;
 
 	readonly info: Mock<(message: string) => void>;
 	readonly warn: Mock<(message: string) => void>;
 
 } {
 
-	return { info: vi.fn(), warn: vi.fn() };
+	return { busy: vi.fn(), info: vi.fn(), warn: vi.fn() };
 
 }
 
@@ -215,6 +217,121 @@ describe("monitor()", () => {
 
 			expect(logger.info).toHaveBeenCalledTimes(1);
 			expect(logger.warn).not.toHaveBeenCalled();
+
+		});
+
+	});
+
+	describe("busy state", () => {
+
+		/**
+		 * Creates a mock fetch leaving every exchange in flight until `settle` answers them all at once.
+		 */
+		function stalling(): {
+
+			readonly serving: Mock<Fetch>;
+			readonly settle: () => void;
+
+		} {
+
+			const settlers: ((response: Response) => void)[] = []; // async latch: every stalled exchange parks here
+
+			return {
+
+				serving: vi.fn<Fetch>().mockImplementation(() => new Promise<Response>(resolve => {
+					settlers.push(resolve);
+				})),
+
+				settle: () => settlers.forEach(settler => settler(new Response()))
+
+			};
+
+		}
+
+
+		it("should state the client is busy while an exchange is in flight", async () => {
+
+			const logger = recording();
+			const { serving, settle } = stalling();
+
+			const exchange = monitor(logger)(serving)(url);
+
+			expect(logger.busy.mock.calls).toEqual([[true]]);
+
+			settle();
+			await exchange;
+
+			expect(logger.busy.mock.calls).toEqual([[true], [false]]);
+
+		});
+
+		it("should state the client is busy once while concurrent exchanges are in flight", async () => {
+
+			const logger = recording();
+			const { serving, settle } = stalling();
+			const client = monitor(logger)(serving);
+
+			const exchanges = Promise.all([client(url), client(url)]);
+
+			expect(logger.busy.mock.calls).toEqual([[true]]);
+
+			settle();
+			await exchanges;
+
+			expect(logger.busy.mock.calls).toEqual([[true], [false]]);
+
+		});
+
+		it("should state the client is idle again after each sequential exchange", async () => {
+
+			const logger = recording();
+			const client = monitor(logger)(serving());
+
+			await client(url);
+			await client(url);
+
+			expect(logger.busy.mock.calls).toEqual([[true], [false], [true], [false]]);
+
+		});
+
+		it("should state the client is idle after an exchange fails", async () => {
+
+			const logger = recording();
+			const failing = vi.fn<Fetch>().mockRejectedValue(new TypeError("network error"));
+
+			await expect(monitor(logger)(failing)(url)).rejects.toThrow(TypeError);
+
+			expect(logger.busy.mock.calls).toEqual([[true], [false]]);
+
+		});
+
+		it("should leave the busy state untouched by an exchange stating a malformed target", async () => {
+
+			const logger = recording();
+
+			await monitor(logger)(serving())("not a URL");
+
+			expect(logger.busy).not.toHaveBeenCalled();
+
+		});
+
+	});
+
+	describe("partial loggers", () => {
+
+		it("should relay an exchange to a logger stating no members", async () => {
+
+			const response = new Response();
+
+			await expect(monitor({})(serving(response))(url)).resolves.toBe(response);
+
+		});
+
+		it("should answer a malformed target to a logger stating no members", async () => {
+
+			const response = await monitor({})(serving())("not a URL");
+
+			expect(response.type).toBe("error");
 
 		});
 

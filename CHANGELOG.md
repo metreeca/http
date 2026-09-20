@@ -12,9 +12,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `@metreeca/http/xsrf` protection middleware, echoing the token stated by the `XSRF-TOKEN` cookie in an
   `X-XSRF-TOKEN` header field on unsafe same-origin exchanges stating none of their own, as the convention Angular
   established prescribes
+- `@metreeca/http/monitor` states the busy status of the client to an optional `logger.busy` member, `true` as the
+  first exchange is relayed and `false` as the last one in flight is answered or fails, so that a waiting indicator is
+  driven without the call sites keeping count; requests stating a malformed URL are answered without being sent and
+  leave the busy status untouched
 
 ### Changed
 
+- `@metreeca/http/monitor` takes a logger whose members are all optional, so that a logger takes on only the concerns
+  it is interested in and whatever it doesn't state is not reported
 - Realign to the renamed `@metreeca/core` values module, raising the minimum supported version: `immutable` is imported
   from `@metreeca/core/values` in place of `@metreeca/core/structures`
 

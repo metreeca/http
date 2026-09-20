@@ -17,8 +17,8 @@
 /**
  * Exchange reporting middleware.
  *
- * Reports every exchange a client performs, as it is submitted and as it is answered, so that what the client is
- * doing is observable without the call sites taking care of it.
+ * Reports every exchange a client performs, as it is submitted and as it is answered, and states whether the client
+ * is busy, so that what the client is doing is observable without the call sites taking care of it.
  *
  * Exchanges are relayed untouched, whatever is reported, so that the middleware is inserted anywhere in a chain, and
  * taken out again, without changing what the chain does.
@@ -70,6 +70,14 @@ const URLClipLimit = 80;
  * - **Response is `ok`** (2xx `status`) and served by the origin: nothing further is reported, leaving a plain
  *   exchange to the single entry stating it was performed
  *
+ * Alongside the entries, the busy status of the client is stated to `logger.busy`: `true` as the first exchange is
+ * relayed and `false` as the last one in flight is answered or fails, so that a waiting indicator is driven without
+ * the call sites keeping count. A request stating a malformed URL is answered without being sent, so it leaves the
+ * busy status untouched.
+ *
+ * A logger takes on only the concerns it is interested in: every member is optional and whatever it doesn't state is
+ * not reported.
+ *
  * Requests are inspected as they are stated, rather than normalised into
  * {@link https://developer.mozilla.org/docs/Web/API/Request `Request`} objects, so that a body carried by the request
  * reaches the layers below untouched.
@@ -79,6 +87,7 @@ const URLClipLimit = 80;
  * it was stated rather than as the layers below leave it.
  *
  * @param logger The logger exchanges are reported to, for instance the platform `console`
+ * @param logger.busy Takes `true` as the client turns busy and `false` as it turns idle again
  * @param logger.info Takes an entry reporting a request as it is sent or a response served from a cache
  * @param logger.warn Takes an entry reporting a request stating a malformed URL or an unsuccessful response
  *
@@ -89,10 +98,18 @@ const URLClipLimit = 80;
  */
 export function monitor(logger: {
 
-	readonly info: (message: string) => unknown;
-	readonly warn: (message: string) => unknown;
+	readonly busy?: (status: boolean) => unknown
+
+	readonly info?: (message: string) => unknown
+	readonly warn?: (message: string) => unknown
 
 }): Middleware {
+
+	const state = {
+
+		pending: 0 // exchanges in flight, shared by every exchange the middleware relays
+
+	};
 
 	// entries are reported as method calls, so that a logger supplied as a whole keeps its binding
 
@@ -102,7 +119,7 @@ export function monitor(logger: {
 
 		if ( isString(input) && !URL.canParse(input) ) { // only a raw string may be malformed
 
-			logger.warn(`${method} ${clip(input, URLClipLimit)} >> malformed resource URL`);
+			logger.warn?.(`${method} ${clip(input, URLClipLimit)} >> malformed resource URL`);
 
 			return Response.error();
 
@@ -110,21 +127,31 @@ export function monitor(logger: {
 
 			const target = clip(getTarget(input).href, URLClipLimit);
 
-			logger.info(`${method} ${target}`);
+			logger.info?.(`${method} ${target}`);
 
-			const response = await fetch(input, init);
+			if ( state.pending++ === 0 ) { logger.busy?.(true); }
 
-			if ( !response.ok ) {
+			try {
 
-				logger.warn(`${method} ${target} >> ${response.status} ${response.statusText}`);
+				const response = await fetch(input, init);
 
-			} else if ( hit(response) ) {
+				if ( !response.ok ) {
 
-				logger.info(`${method} ${target} >> ${response.status} Retrieved From Cache`);
+					logger.warn?.(`${method} ${target} >> ${response.status} ${response.statusText}`);
+
+				} else if ( hit(response) ) {
+
+					logger.info?.(`${method} ${target} >> ${response.status} Retrieved From Cache`);
+
+				}
+
+				return response;
+
+			} finally { // the client is idle again however the exchange ends, answered or failed
+
+				if ( --state.pending === 0 ) { logger.busy?.(false); }
 
 			}
-
-			return response;
 
 		}
 
