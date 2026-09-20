@@ -16,6 +16,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   first exchange is relayed and `false` as the last one in flight is answered or fails, so that a waiting indicator is
   driven without the call sites keeping count; requests stating a malformed URL are answered without being sent and
   leave the busy status untouched
+- `@metreeca/http/success` exposes `isProblem` and `toProblem`, recognising a value as problem details and normalising
+  an arbitrary failure value into them, so that whatever a failed exchange surfaces is handled in a single shape: an
+  `Error` contributes its name as `title` and its message as `detail`, any other JSON value is carried as `report` and
+  anything else is rendered as `detail`, all under `status` 0
 
 ### Changed
 

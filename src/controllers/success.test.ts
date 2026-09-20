@@ -15,8 +15,97 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { type Problem, success } from "./success.js";
+import { isProblem, type Problem, success, toProblem } from "./success.js";
 
+
+describe("isProblem()", () => {
+
+	it.each([
+		["type", { type: "about:blank" }],
+		["title", { title: "Not Found" }],
+		["instance", { instance: "/api/users/123" }],
+		["status", { status: 404 }],
+		["detail", { detail: "Resource /api/users/123 does not exist" }],
+		["report", { report: { timestamp: "2025-12-02T10:30:00Z" } }]
+	])("should accept an object carrying %s alone", (_, value) => {
+		expect(isProblem(value)).toBeTruthy();
+	});
+
+	it("should accept a member present with an undefined value", () => {
+		expect(isProblem({ status: undefined })).toBeTruthy();
+	});
+
+	it("should accept extension members alongside a known member", () => {
+		expect(isProblem({ status: 404, balance: 30, accounts: ["/account/12345"] })).toBeTruthy();
+	});
+
+	it.each([
+		["an empty object", {}],
+		["only extension members", { balance: 30 }]
+	])("should reject an object carrying no known member: %s", (_, value) => {
+		expect(isProblem(value)).toBeFalsy();
+	});
+
+	it.each([
+		["type", { type: 0 }],
+		["title", { title: 0 }],
+		["instance", { instance: 0 }],
+		["status", { status: "404" }],
+		["detail", { detail: 0 }],
+		["report", { report: () => undefined }]
+	])("should reject an object carrying a malformed %s member", (_, value) => {
+		expect(isProblem(value)).toBeFalsy();
+	});
+
+	it.each([
+		["null", null],
+		["undefined", undefined],
+		["a string", "Not Found"],
+		["a number", 404],
+		["an array", [{ status: 404 }]],
+		["an error", new Error("Network error")]
+	])("should reject %s", (_, value) => {
+		expect(isProblem(value)).toBeFalsy();
+	});
+
+});
+
+describe("toProblem()", () => {
+
+	it("should take a problem as it stands", () => {
+		expect(toProblem({ status: 404, detail: "Not Found", balance: 30 }))
+			.toEqual({ status: 404, detail: "Not Found", balance: 30 });
+	});
+
+	it("should convert an error to its name and message alone", () => {
+		const error = new Error("Network error", { cause: new TypeError("Failed to fetch") });
+
+		expect(toProblem(error)).toStrictEqual({
+			status: 0,
+			title: "Error",
+			detail: "Network error"
+		});
+	});
+
+	it.each([
+		["an object", { balance: 30 }],
+		["a scalar", "Network error"]
+	])("should carry %s as report", (_, value) => {
+		expect(toProblem(value)).toEqual({ status: 0, report: value });
+	});
+
+	it.each([
+		["undefined", undefined, "undefined"],
+		["a function", () => undefined, "() => undefined"]
+	])("should render %s as detail", (_, value, detail) => {
+		expect(toProblem(value)).toEqual({ status: 0, detail });
+	});
+
+	it("should return an immutable problem", () => {
+		expect(Object.isFrozen(toProblem({ status: 404 }))).toBeTruthy();
+	});
+
+});
 
 describe("success()", () => {
 

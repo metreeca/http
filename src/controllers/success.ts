@@ -18,7 +18,11 @@
  * Uniform failure reporting middleware.
  *
  * Admits only 2xx responses from the wrapped {@link Fetch} implementation, reporting error responses and transport
- * failures alike as {@link Problem | problems}.
+ * failures alike as {@link Problem | problems}, so that a failed exchange is handled in one shape whatever caused it.
+ *
+ * The same shape is available on its own to code handling failures raised elsewhere: any value may be recognised as a
+ * problem, or normalised into one, so that a handler branches on problem details without first telling apart what it
+ * was handed.
  *
  * **Usage**
  *
@@ -45,10 +49,24 @@
  * @see {@link https://www.rfc-editor.org/rfc/rfc9457 RFC 9457 - Problem Details for HTTP APIs}
  */
 
-import { isError, type Value } from "@metreeca/core";
+import { isAny, isError, isNumber, isObject, isOptional, isString, isValue, key, type Value } from "@metreeca/core";
 import { immutable } from "@metreeca/core/values";
 import type { Fetch, Middleware } from "../index.js";
 
+
+const Members = immutable({
+
+	type: (v: unknown) => isOptional(v, isString),
+	title: (v: unknown) => isOptional(v, isString),
+	instance: (v: unknown) => isOptional(v, isString),
+	status: (v: unknown) => isOptional(v, isNumber),
+	detail: (v: unknown) => isOptional(v, isString),
+	report: (v: unknown) => isOptional(v, isValue)
+
+});
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Problem details for HTTP APIs.
@@ -57,6 +75,9 @@ import type { Fetch, Middleware } from "../index.js";
  * optional, so a report carries as much detail as its source provides: `type` and `title` classify the problem,
  * `status`, `detail`, and `instance` pin it to a specific occurrence, and `report` conveys machine-readable data
  * for automated handling.
+ *
+ * {@link toProblem} normalises an arbitrary failure value into this shape and {@link isProblem} recognises a value
+ * already carrying it.
  *
  * {@link success} reports failed exchanges in this shape, so a client assembled with it surfaces transport failures
  * and error responses alike as problem details.
@@ -116,6 +137,74 @@ export type Problem = {
 
 }
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Checks if a value is a {@link Problem}.
+ *
+ * Every RFC 9457 member is optional, so a plain object qualifies as soon as it carries at least one of them with a
+ * well-formed value: an object carrying none of them describes no failure, and one carrying a member of an unexpected
+ * type doesn't describe it portably. Extension members are accepted as they come, whatever they carry.
+ *
+ * @param value The value to check
+ *
+ * @returns True if `value` is a plain object carrying at least one well-formed {@link Problem} member; false otherwise
+ */
+export function isProblem(value: unknown): value is Problem {
+
+	return isObject(value, { ...Members, [key]: isAny })
+		&& Object.keys(Members).some(member => member in value);
+
+}
+
+/**
+ * Converts a value to a {@link Problem}.
+ *
+ * Normalises whatever a failed exchange surfaces into a single shape callers may branch on:
+ *
+ * - a value already qualifying as a {@link Problem} is taken as it stands
+ * - an {@link !Error Error} contributes its name as `title` and its message as `detail`
+ * - any other JSON value is carried as `report`
+ * - anything else is rendered as `detail`
+ *
+ * Values other than problems are assigned `status` 0, marking a failure no origin server assigned a status to.
+ *
+ * Stack traces and causes are left out, as a problem is expected to travel beyond the process that raised it.
+ *
+ * @param value The value to convert
+ *
+ * @returns An immutable {@link Problem} describing `value`
+ */
+export function toProblem(value: unknown): Problem {
+
+	return immutable(isProblem(value) ? value
+
+		: isError(value) ? {
+
+			status: 0,
+
+			title: value.name,
+			detail: value.message
+
+		} : isValue(value) ? {
+
+			status: 0,
+
+			report: value
+
+		} : {
+
+			status: 0,
+
+			detail: String(value)
+
+		});
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Creates a middleware admitting only 2xx responses, reporting failures as {@link Problem | problems}.
