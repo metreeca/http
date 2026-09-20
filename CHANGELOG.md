@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.3.0](https://github.com/metreeca/http/compare/v0.2.0...HEAD)
 
+### Added
+
+- `@metreeca/http/xsrf` protection middleware, echoing the token stated by the `XSRF-TOKEN` cookie in an
+  `X-XSRF-TOKEN` header field on unsafe same-origin exchanges stating none of their own, as the convention Angular
+  established prescribes
+
 ### Changed
 
 - Realign to the renamed `@metreeca/core` values module, raising the minimum supported version: `immutable` is imported

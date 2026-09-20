@@ -68,6 +68,7 @@ a further chain.
 > | [@metreeca/http/timeout]   | Bounded response wait              |
 > | [@metreeca/http/success]   | Uniform failure reporting          |
 > | [@metreeca/http/monitor]   | Exchange reporting                 |
+> | [@metreeca/http/xsrf]      | XSRF protection                    |
 > | **Exchange Resolution**    |                                    |
 > | [@metreeca/http/cache]     | HTTP response caching              |
 > | [@metreeca/http/protocol]  | Custom protocol handlers           |
@@ -88,6 +89,8 @@ a further chain.
 [@metreeca/http/success]: https://metreeca.github.io/http/modules/success.html
 
 [@metreeca/http/monitor]: https://metreeca.github.io/http/modules/monitor.html
+
+[@metreeca/http/xsrf]: https://metreeca.github.io/http/modules/xsrf.html
 
 [@metreeca/http/cache]: https://metreeca.github.io/http/modules/cache.html
 
