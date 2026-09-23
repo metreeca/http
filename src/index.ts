@@ -681,7 +681,8 @@ export type Middleware = (fetch: Fetch) => Fetch
  * The standard function is resolved when the chain is assembled, so a client routes through a global replaced before
  * its creation, such as a test double or a polyfill installed at start-up, but not through one replaced afterwards.
  * To bind a client to an implementation of its own, regardless of the global one, close the chain with
- * {@link transport!transport transport}.
+ * {@link transport!transport transport}; to answer exchanges locally, without a backend, close it with
+ * {@link mock!mock mock}.
  *
  * @group Factories
  *

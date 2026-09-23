@@ -37,7 +37,8 @@
     "./xsrf": "./dist/controllers/xsrf.js",
     "./cache": "./dist/resolvers/cache/index.js",
     "./protocol": "./dist/resolvers/protocol.js",
-    "./transport": "./dist/resolvers/transport.js"
+    "./transport": "./dist/resolvers/transport.js",
+    "./mock": "./dist/resolvers/mock.js"
   },
   "files": [
     "README.md",

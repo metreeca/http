@@ -73,6 +73,7 @@ a further chain.
 > | [@metreeca/http/cache]     | HTTP response caching              |
 > | [@metreeca/http/protocol]  | Custom protocol handlers           |
 > | [@metreeca/http/transport] | Custom fetch transport             |
+> | [@metreeca/http/mock]      | Mock fetch transport               |
 
 [@metreeca/http]: https://metreeca.github.io/http/modules/index.html
 
@@ -97,6 +98,8 @@ a further chain.
 [@metreeca/http/protocol]: https://metreeca.github.io/http/modules/protocol.html
 
 [@metreeca/http/transport]: https://metreeca.github.io/http/modules/transport.html
+
+[@metreeca/http/mock]: https://metreeca.github.io/http/modules/mock.html
 
 # Support
 

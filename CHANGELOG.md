@@ -12,6 +12,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `@metreeca/http/xsrf` protection middleware, echoing the token stated by the `XSRF-TOKEN` cookie in an
   `X-XSRF-TOKEN` header field on unsafe same-origin exchanges stating none of their own, as the convention Angular
   established prescribes
+- `@metreeca/http/mock` transport middleware, answering every exchange with a response computed locally after an
+  optional simulated latency, so that demos and interactive wireframes run on a realistic client without a backend;
+  responses default to an empty JSON object and exchanges aborted before being answered are rejected with the abort
+  reason, as the standard `fetch` function does
 - `@metreeca/http/monitor` states the busy status of the client to an optional `logger.busy` member, `true` as the
   first exchange is relayed and `false` as the last one in flight is answered or fails, so that a waiting indicator is
   driven without the call sites keeping count; requests stating a malformed URL are answered without being sent and
