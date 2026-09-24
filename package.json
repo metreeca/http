@@ -57,7 +57,7 @@
     "proof": "npx typedoc && (npx typedoc --watch & npx wds --root-dir docs --watch --open)"
   },
   "dependencies": {
-    "@metreeca/core": "^0.10.0"
+    "@metreeca/core": "^0.11.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
