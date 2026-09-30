@@ -23,10 +23,11 @@
  * a drop-in replacement that adjusts requests and responses as they flow through, and {@link createFetch} assembles a
  * chain of them into a single client to be shared across an application.
  *
- * Named constants for the HTTP status codes are provided alongside, so that response handling reads as intent rather
- * than as bare numeric literals. Coverage is complete for the codes defined by RFC 9110 § 15, extended with the
- * registered codes in common use defined by later specifications; placeholders reserved without a name and codes
- * registered by narrower protocol extensions are left out and compared as plain numbers.
+ * Named constants for the HTTP methods and status codes are provided alongside, so that request and response handling
+ * reads as intent rather than as bare literals. Method coverage is complete for the methods defined by RFC 9110 § 9,
+ * extended with `PATCH` from RFC 5789. Status code coverage is complete for the codes defined by RFC 9110 § 15,
+ * extended with the registered codes in common use defined by later specifications; placeholders reserved without a
+ * name and codes registered by narrower protocol extensions are left out and compared as plain numbers.
  *
  * Parsing helpers turn the textual field values HTTP exchanges are made of into plain JavaScript ones, sparing each
  * call site the splitting, unquoting and date conversion the field grammars call for. Malformed input is reported as
@@ -34,12 +35,12 @@
  *
  * **Usage**
  *
- * A named constant stands in for the status code it names:
+ * A named constant stands in for the method or status code it names:
  *
  * ```typescript
- * import { NotFound } from "@metreeca/http";
+ * import { NotFound, POST } from "@metreeca/http";
  *
- * (await fetch("https://api.example.com/data")).status === NotFound; // rather than 404
+ * (await fetch("https://api.example.com/data", { method: POST })).status === NotFound; // rather than "POST" and 404
  * ```
  *
  * A middleware of your own is written as a function wrapping the client it delegates to:
@@ -129,9 +130,116 @@
  *
  * @see {@link https://fetch.spec.whatwg.org/ WHATWG Fetch Standard}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-5 RFC 9110 § 5 - Fields}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9 RFC 9110 § 9 - Methods}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15 RFC 9110 § 15 - Status Codes}
  * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Status MDN - HTTP response status codes}
  */
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Transfers a current representation of the target resource.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.1 RFC 9110 § 9.3.1 - GET}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/GET MDN - GET}
+ */
+export const GET = "GET";
+
+/**
+ * Transfers the header fields of a current representation of the target resource, without its content.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.2 RFC 9110 § 9.3.2 - HEAD}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/HEAD MDN - HEAD}
+ */
+export const HEAD = "HEAD";
+
+/**
+ * Submits the enclosed content for processing by the target resource, according to its own semantics.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.3 RFC 9110 § 9.3.3 - POST}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/POST MDN - POST}
+ */
+export const POST = "POST";
+
+/**
+ * Replaces all current representations of the target resource with the enclosed content.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.4 RFC 9110 § 9.3.4 - PUT}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/PUT MDN - PUT}
+ */
+export const PUT = "PUT";
+
+/**
+ * Applies a set of changes described by the enclosed content to the target resource.
+ *
+ * > [!NOTE]
+ * > `fetch` doesn't fold this method name to uppercase, so a request stating it in lowercase is sent and reported as
+ * > stated and never compares equal to this constant: state it through this constant to be understood by the origin
+ * > server.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc5789#section-2 RFC 5789 § 2 - The PATCH Method}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/PATCH MDN - PATCH}
+ */
+export const PATCH = "PATCH";
+
+/**
+ * Removes the association between the target resource and its current functionality.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.5 RFC 9110 § 9.3.5 - DELETE}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/DELETE MDN - DELETE}
+ */
+export const DELETE = "DELETE";
+
+/**
+ * Establishes a tunnel to the server identified by the target resource.
+ *
+ * > [!NOTE]
+ * > `fetch` refuses to perform a request stating this method, so the constant serves to recognise it rather than to
+ * > request it.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.6 RFC 9110 § 9.3.6 - CONNECT}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/CONNECT MDN - CONNECT}
+ */
+export const CONNECT = "CONNECT";
+
+/**
+ * Describes the communication options available for the target resource.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.7 RFC 9110 § 9.3.7 - OPTIONS}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/OPTIONS MDN - OPTIONS}
+ */
+export const OPTIONS = "OPTIONS";
+
+/**
+ * Performs a message loop-back test along the path to the target resource.
+ *
+ * > [!NOTE]
+ * > `fetch` refuses to perform a request stating this method, so the constant serves to recognise it rather than to
+ * > request it.
+ *
+ * @group Methods
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-9.3.8 RFC 9110 § 9.3.8 - TRACE}
+ * @see {@link https://developer.mozilla.org/docs/Web/HTTP/Reference/Methods/TRACE MDN - TRACE}
+ */
+export const TRACE = "TRACE";
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

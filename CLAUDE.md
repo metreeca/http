@@ -12,10 +12,10 @@
 # Overview
 
 `@metreeca/http` is the HTTP substrate shared across Metreeca packages: a composable middleware layer over the standard
-`fetch` function, ready-made middlewares for recurring concerns, and the RFC 9110 status code constants.
+`fetch` function, ready-made middlewares for recurring concerns, and the HTTP method and status code constants.
 
 Each middleware is published as its own subpath module, so consumers pay only for what they import; the root module
-carries the `Fetch` and `Middleware` types, the `createFetch` assembler and the status code constants.
+carries the `Fetch` and `Middleware` types, the `createFetch` assembler and the method and status code constants.
 
 The package was migrated from `@metreeca/core/fetch` and `@metreeca/core/http`, which have since been removed from
 `@metreeca/core`.

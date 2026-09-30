@@ -183,7 +183,8 @@ const ParametersPattern = /(?:"(?:[^"\\]|\\.)*"|[^;])+/g;
  * > [!NOTE]
  * > A method name is case-sensitive, so an extension method is reported exactly as stated and only the standard names
  * > `fetch` normalises are folded to uppercase: what is reported is the method the origin server is asked for, so it
- * > compares directly against the standard names without ever misreporting an extension method defined in lowercase.
+ * > compares directly against the method constants, such as {@link GET}, without ever misreporting an extension method
+ * > defined in lowercase.
  *
  * @param input The request or target URL the method is to be retrieved from, unless overridden by `init`
  * @param init The request options the method is to be retrieved from, taking precedence over `input`

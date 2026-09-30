@@ -7,6 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.0](https://github.com/metreeca/http/compare/v0.3.0...HEAD)
 
+### Added
+
+- Named constants for the HTTP methods defined by RFC 9110 § 9 and for `PATCH` from RFC 5789, so that request handling
+  reads as intent rather than as bare string literals
+
 ## [0.3.0](https://github.com/metreeca/http/compare/v0.2.0...v0.3.0) - 2026-09-24
 
 ### Added
