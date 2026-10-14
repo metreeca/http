@@ -26,19 +26,58 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./dist/index.js",
-    "./basic": "./dist/authenticators/basic.js",
-    "./bearer": "./dist/authenticators/bearer.js",
-    "./headers": "./dist/controllers/headers.js",
-    "./throttle": "./dist/controllers/throttle.js",
-    "./timeout": "./dist/controllers/timeout.js",
-    "./success": "./dist/controllers/success.js",
-    "./monitor": "./dist/controllers/monitor.js",
-    "./xsrf": "./dist/controllers/xsrf.js",
-    "./cache": "./dist/resolvers/cache/index.js",
-    "./protocol": "./dist/resolvers/protocol.js",
-    "./transport": "./dist/resolvers/transport.js",
-    "./mock": "./dist/resolvers/mock.js"
+    ".": {
+      "@metreeca/source": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./basic": {
+      "@metreeca/source": "./src/authenticators/basic.ts",
+      "default": "./dist/authenticators/basic.js"
+    },
+    "./bearer": {
+      "@metreeca/source": "./src/authenticators/bearer.ts",
+      "default": "./dist/authenticators/bearer.js"
+    },
+    "./headers": {
+      "@metreeca/source": "./src/controllers/headers.ts",
+      "default": "./dist/controllers/headers.js"
+    },
+    "./throttle": {
+      "@metreeca/source": "./src/controllers/throttle.ts",
+      "default": "./dist/controllers/throttle.js"
+    },
+    "./timeout": {
+      "@metreeca/source": "./src/controllers/timeout.ts",
+      "default": "./dist/controllers/timeout.js"
+    },
+    "./success": {
+      "@metreeca/source": "./src/controllers/success.ts",
+      "default": "./dist/controllers/success.js"
+    },
+    "./monitor": {
+      "@metreeca/source": "./src/controllers/monitor.ts",
+      "default": "./dist/controllers/monitor.js"
+    },
+    "./xsrf": {
+      "@metreeca/source": "./src/controllers/xsrf.ts",
+      "default": "./dist/controllers/xsrf.js"
+    },
+    "./cache": {
+      "@metreeca/source": "./src/resolvers/cache/index.ts",
+      "default": "./dist/resolvers/cache/index.js"
+    },
+    "./protocol": {
+      "@metreeca/source": "./src/resolvers/protocol.ts",
+      "default": "./dist/resolvers/protocol.js"
+    },
+    "./transport": {
+      "@metreeca/source": "./src/resolvers/transport.ts",
+      "default": "./dist/resolvers/transport.js"
+    },
+    "./mock": {
+      "@metreeca/source": "./src/resolvers/mock.ts",
+      "default": "./dist/resolvers/mock.js"
+    }
   },
   "files": [
     "README.md",
