@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Upgrade `@metreeca/core` to `^0.12.1`
 - Published exports declare the `@metreeca/source` condition, resolving each entry point to its TypeScript source in
   checkouts linked for local development, while registry consumers keep resolving to the compiled `dist` modules
 
