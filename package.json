@@ -88,10 +88,10 @@
     "node": ">=22.22.0"
   },
   "scripts": {
-    "clean": "rm dist docs node_modules",
+    "clean": "ush rm dist docs node_modules",
     "prime": "npm ci",
     "setup": "npm ci && ln",
-    "build": "rm dist docs && tsc -p tsconfig.build.json && npx typedoc",
+    "build": "ush rm dist docs && tsc -p tsconfig.build.json && npx typedoc",
     "check": "npx vitest --typecheck run",
     "proof": "npx typedoc && (npx typedoc --watch & npx wds --root-dir docs --watch --open)"
   },
