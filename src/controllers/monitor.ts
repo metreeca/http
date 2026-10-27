@@ -35,7 +35,7 @@
  * @module
  */
 
-import { isString } from "@metreeca/core";
+import { isError, isString } from "@metreeca/core";
 import { clip } from "@metreeca/core/strings";
 import { getMethod, getTarget } from "../index.core.js";
 import type { Fetch, Middleware } from "../index.js";
@@ -69,6 +69,9 @@ const URLClipLimit = 80;
  *   note stating the content came from a cache, as told by the `Age` field only a cache states
  * - **Response is `ok`** (2xx `status`) and served by the origin: nothing further is reported, leaving a plain
  *   exchange to the single entry stating it was performed
+ * - **Exchange fails** without a response, as when the resource cannot be reached: the error message is reported to
+ *   `logger.warn`, followed by the `code` or else the message of its `cause` where it states one, so that a failure
+ *   names the resource it concerns and the reason behind a generic message; the error is then rethrown unchanged
  *
  * Alongside the entries, the busy status of the client is stated to `logger.busy`: `true` as the first exchange is
  * relayed and `false` as the last one in flight is answered or fails, so that a waiting indicator is driven without
@@ -89,7 +92,7 @@ const URLClipLimit = 80;
  * @param logger The logger exchanges are reported to, for instance the platform `console`
  * @param logger.busy Takes `true` as the client turns busy and `false` as it turns idle again
  * @param logger.info Takes an entry reporting a request as it is sent or a response served from a cache
- * @param logger.warn Takes an entry reporting a request stating a malformed URL or an unsuccessful response
+ * @param logger.warn Takes an entry reporting a malformed URL, an unsuccessful response or a failed exchange
  *
  * @returns A {@link Middleware} reporting every exchange it relays to `logger`, answering a request stating a
  *     malformed URL with a network error without sending it
@@ -133,7 +136,13 @@ export function monitor(logger: {
 
 			try {
 
-				const response = await fetch(input, init);
+				const response = await fetch(input, init).catch((error: unknown) => {
+
+					logger.warn?.(`${method} ${target} >> ${failure(error)}`);
+
+					throw error;
+
+				});
 
 				if ( !response.ok ) {
 
@@ -174,6 +183,29 @@ export function monitor(logger: {
 	function hit(response: Response): boolean {
 
 		return response.headers.has("age");
+
+	}
+
+	/**
+	 * Describes why an exchange failed.
+	 *
+	 * Extends the message of the error with the `code` or else the message of its `cause`, as a client may state the
+	 * actual reason only there, behind a generic message such as `fetch failed` that names no resource and no reason.
+	 *
+	 * @param error The error the exchange failed with
+	 *
+	 * @returns A description of `error`, followed by the reason stated by its cause in parentheses, if any
+	 */
+	function failure(error: unknown): string {
+
+		const message = isError(error) ? error.message : String(error);
+		const cause = isError(error) ? error.cause : undefined;
+
+		const reason = !isError(cause) ? ""
+			: "code" in cause && isString(cause.code) ? cause.code
+				: cause.message;
+
+		return reason ? `${message} (${reason})` : message;
 
 	}
 

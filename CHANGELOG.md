@@ -7,6 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metreeca/http/compare/v0.5.0...HEAD)
 
+### Fixed
+
+- `@metreeca/http/monitor` reports an exchange failing without a response as a warning naming the resource and the
+  reason stated by the cause of the error, such as `fetch failed (ETIMEDOUT)`, rather than letting it go unreported
+
 ## [0.5.0](https://github.com/metreeca/http/compare/v0.4.1...v0.5.0) - 2026-10-19
 
 ### Changed

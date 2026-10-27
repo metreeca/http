@@ -222,6 +222,60 @@ describe("monitor()", () => {
 
 	});
 
+	describe("failed exchanges", () => {
+
+		/**
+		 * Creates a mock fetch failing every exchange with the given error.
+		 */
+		function failing(error: Error): Mock<Fetch> {
+
+			return vi.fn<Fetch>().mockRejectedValue(error);
+
+		}
+
+
+		it("should report a failed exchange as a warning", async () => {
+
+			const logger = recording();
+
+			await expect(monitor(logger)(failing(new TypeError("network error")))(url)).rejects.toThrow();
+
+			expect(logger.warn).toHaveBeenCalledWith(`GET ${url} >> network error`);
+
+		});
+
+		it("should report the code of the cause of a failed exchange", async () => {
+
+			const logger = recording();
+			const cause = Object.assign(new Error(), { code: "ETIMEDOUT" });
+
+			await expect(monitor(logger)(failing(new TypeError("fetch failed", { cause })))(url)).rejects.toThrow();
+
+			expect(logger.warn).toHaveBeenCalledWith(`GET ${url} >> fetch failed (ETIMEDOUT)`);
+
+		});
+
+		it("should report the message of the cause of a failed exchange stating no code", async () => {
+
+			const logger = recording();
+			const cause = new Error("connection refused");
+
+			await expect(monitor(logger)(failing(new TypeError("fetch failed", { cause })))(url)).rejects.toThrow();
+
+			expect(logger.warn).toHaveBeenCalledWith(`GET ${url} >> fetch failed (connection refused)`);
+
+		});
+
+		it("should reject with the error the exchange failed with", async () => {
+
+			const error = new TypeError("network error");
+
+			await expect(monitor(recording())(failing(error))(url)).rejects.toBe(error);
+
+		});
+
+	});
+
 	describe("busy state", () => {
 
 		/**
