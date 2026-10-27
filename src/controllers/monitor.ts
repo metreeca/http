@@ -20,8 +20,9 @@
  * Reports every exchange a client performs, as it is submitted and as it is answered, and states whether the client
  * is busy, so that what the client is doing is observable without the call sites taking care of it.
  *
- * Exchanges are relayed untouched, whatever is reported, so that the middleware is inserted anywhere in a chain, and
- * taken out again, without changing what the chain does.
+ * Requests and responses are relayed untouched, whatever is reported. A request that yields no response, because its
+ * URL is malformed or its exchange fails, is answered with a network error, so that callers handle every failure
+ * through a single channel: a response whose `ok` is `false`, whether the server or the transport failed.
  *
  * **Usage**
  *
@@ -71,12 +72,13 @@ const URLClipLimit = 80;
  *   exchange to the single entry stating it was performed
  * - **Exchange fails** without a response, as when the resource cannot be reached: the error message is reported to
  *   `logger.warn`, followed by the `code` or else the message of its `cause` where it states one, so that a failure
- *   names the resource it concerns and the reason behind a generic message; the error is then rethrown unchanged
+ *   names the resource it concerns and the reason behind a generic message; the exchange is then answered with a
+ *   network error `Response`, which carries no reason, so the reason for the failure is available from the log alone
  *
  * Alongside the entries, the busy status of the client is stated to `logger.busy`: `true` as the first exchange is
- * relayed and `false` as the last one in flight is answered or fails, so that a waiting indicator is driven without
- * the call sites keeping count. A request stating a malformed URL is answered without being sent, so it leaves the
- * busy status untouched.
+ * relayed and `false` as the last one in flight is answered, whether it failed or not, so that a waiting indicator is
+ * driven without the call sites keeping count. A request stating a malformed URL is answered without being sent, so it
+ * leaves the busy status untouched, even while other exchanges are still in flight.
  *
  * A logger takes on only the concerns it is interested in: every member is optional and whatever it doesn't state is
  * not reported.
@@ -87,15 +89,17 @@ const URLClipLimit = 80;
  *
  * Exchanges are reported as the caller states them, so the middleware is best declared first in a chain: a malformed
  * URL is screened out before it reaches a layer that would reject it outright, at the cost of reporting a request as
- * it was stated rather than as the layers below leave it.
+ * it was stated rather than as the layers below leave it. Layers declared below still receive failed exchanges as
+ * rejections, so a middleware retrying transient failures, such as timeouts and connection resets, still sees every
+ * failure it is meant to retry when it is declared below this one, closer to the transport.
  *
  * @param logger The logger exchanges are reported to, for instance the platform `console`
  * @param logger.busy Takes `true` as the client turns busy and `false` as it turns idle again
  * @param logger.info Takes an entry reporting a request as it is sent or a response served from a cache
  * @param logger.warn Takes an entry reporting a malformed URL, an unsuccessful response or a failed exchange
  *
- * @returns A {@link Middleware} reporting every exchange it relays to `logger`, answering a request stating a
- *     malformed URL with a network error without sending it
+ * @returns A {@link Middleware} reporting every exchange it relays to `logger`, and answering a request that yields no
+ *     response, because its URL is malformed or its exchange fails, with a network error rather than a rejection
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-5.1 RFC 9111 § 5.1 - Age}
  */
@@ -136,25 +140,27 @@ export function monitor(logger: {
 
 			try {
 
-				const response = await fetch(input, init).catch((error: unknown) => {
+				return await fetch(input, init).then(response => {
+
+					if ( !response.ok ) {
+
+						logger.warn?.(`${method} ${target} >> ${response.status} ${response.statusText}`);
+
+					} else if ( hit(response) ) {
+
+						logger.info?.(`${method} ${target} >> ${response.status} Retrieved From Cache`);
+
+					}
+
+					return response;
+
+				}, (error: unknown) => { // a failed exchange is reported once, rather than again as a network error
 
 					logger.warn?.(`${method} ${target} >> ${failure(error)}`);
 
-					throw error;
+					return Response.error();
 
 				});
-
-				if ( !response.ok ) {
-
-					logger.warn?.(`${method} ${target} >> ${response.status} ${response.statusText}`);
-
-				} else if ( hit(response) ) {
-
-					logger.info?.(`${method} ${target} >> ${response.status} Retrieved From Cache`);
-
-				}
-
-				return response;
 
 			} finally { // the client is idle again however the exchange ends, answered or failed
 

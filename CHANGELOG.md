@@ -7,6 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.6.0](https://github.com/metreeca/http/compare/v0.5.0...HEAD)
 
+### Changed
+
+- `@metreeca/http/monitor` answers an exchange failing without a response with a network error `Response` rather than
+  rejecting, so callers handle transport and server failures alike through a response whose `ok` is `false`
+
 ### Fixed
 
 - `@metreeca/http/monitor` reports an exchange failing without a response as a warning naming the resource and the

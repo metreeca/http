@@ -238,9 +238,19 @@ describe("monitor()", () => {
 
 			const logger = recording();
 
-			await expect(monitor(logger)(failing(new TypeError("network error")))(url)).rejects.toThrow();
+			await monitor(logger)(failing(new TypeError("network error")))(url);
 
 			expect(logger.warn).toHaveBeenCalledWith(`GET ${url} >> network error`);
+
+		});
+
+		it("should report a failed exchange with a single warning", async () => {
+
+			const logger = recording();
+
+			await monitor(logger)(failing(new TypeError("network error")))(url);
+
+			expect(logger.warn).toHaveBeenCalledTimes(1);
 
 		});
 
@@ -249,7 +259,7 @@ describe("monitor()", () => {
 			const logger = recording();
 			const cause = Object.assign(new Error(), { code: "ETIMEDOUT" });
 
-			await expect(monitor(logger)(failing(new TypeError("fetch failed", { cause })))(url)).rejects.toThrow();
+			await monitor(logger)(failing(new TypeError("fetch failed", { cause })))(url);
 
 			expect(logger.warn).toHaveBeenCalledWith(`GET ${url} >> fetch failed (ETIMEDOUT)`);
 
@@ -260,17 +270,17 @@ describe("monitor()", () => {
 			const logger = recording();
 			const cause = new Error("connection refused");
 
-			await expect(monitor(logger)(failing(new TypeError("fetch failed", { cause })))(url)).rejects.toThrow();
+			await monitor(logger)(failing(new TypeError("fetch failed", { cause })))(url);
 
 			expect(logger.warn).toHaveBeenCalledWith(`GET ${url} >> fetch failed (connection refused)`);
 
 		});
 
-		it("should reject with the error the exchange failed with", async () => {
+		it("should answer a failed exchange with a network error", async () => {
 
-			const error = new TypeError("network error");
+			const response = await monitor(recording())(failing(new TypeError("network error")))(url);
 
-			await expect(monitor(recording())(failing(error))(url)).rejects.toBe(error);
+			expect(response.type).toBe("error");
 
 		});
 
@@ -353,7 +363,7 @@ describe("monitor()", () => {
 			const logger = recording();
 			const failing = vi.fn<Fetch>().mockRejectedValue(new TypeError("network error"));
 
-			await expect(monitor(logger)(failing)(url)).rejects.toThrow(TypeError);
+			await monitor(logger)(failing)(url);
 
 			expect(logger.busy.mock.calls).toEqual([[true], [false]]);
 
@@ -384,6 +394,16 @@ describe("monitor()", () => {
 		it("should answer a malformed target to a logger stating no members", async () => {
 
 			const response = await monitor({})(serving())("not a URL");
+
+			expect(response.type).toBe("error");
+
+		});
+
+		it("should answer a failed exchange to a logger stating no members", async () => {
+
+			const failing = vi.fn<Fetch>().mockRejectedValue(new TypeError("network error"));
+
+			const response = await monitor({})(failing)(url);
 
 			expect(response.type).toBe("error");
 
