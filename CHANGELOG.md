@@ -7,7 +7,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.6.0](https://github.com/metreeca/http/compare/v0.5.0...HEAD)
 
+### Added
+
+- `@metreeca/http/cache` `force` option, caching the targets it selects whatever caching directives the origin server
+  states, so that a source forbidding caching on every response is reused under the freshness `ttl` assumes
+
 ### Changed
+
+- **Breaking**: `@metreeca/http/cache` `skip` option renamed to `avoid`, pairing it with `force` as the policy keeping
+  selected targets out of the cache whatever the origin server allows; behaviour is unchanged
 
 - `@metreeca/http/monitor` answers an exchange failing without a response with a network error `Response` rather than
   rejecting, so callers handle transport and server failures alike through a response whose `ok` is `false`

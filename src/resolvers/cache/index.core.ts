@@ -22,10 +22,13 @@
 
 import { isFunction } from "@metreeca/core";
 import type { Bucket } from "@metreeca/core/bucket";
+import { glob } from "@metreeca/core/strings";
 import { parseDuration, parseInstant, parseList, parseParameter } from "../../index.core.js";
 import {
 	BadRequest,
+	GET,
 	Gone,
+	HEAD,
 	MethodNotAllowed,
 	MovedPermanently,
 	MultipleChoices,
@@ -40,32 +43,10 @@ import {
 } from "../../index.js";
 import { createBucketStore } from "./bucket.js";
 import { createMemoryStore } from "./memory.js";
-import { glob } from "@metreeca/core/strings";
 
 
 /**
- * The methods an exchange is answered from the store for.
- */
-export const Safe: readonly string[] = [ "GET", "HEAD" ];
-
-/**
- * The status codes a freshness lifetime is assumed for where a response states none.
- *
- * A response answering with any other status code and stating no expiration of its own is never reused, however long a
- * freshness the consumer is willing to assume.
- *
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15.1 RFC 9110 § 15.1 - Overview of Status Codes}
- * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
- */
-export const Heuristic: readonly number[] = [
-	OK, NonAuthoritativeInformation, NoContent, PartialContent,
-	MultipleChoices, MovedPermanently, PermanentRedirect,
-	NotFound, MethodNotAllowed, Gone, URITooLong,
-	NotImplemented
-];
-
-/**
- * The share of the interval a response reports its content as unchanged that it is assumed to stay fresh for.
+ * The share of its unchanged interval that a response is assumed to stay fresh for.
  *
  * A response stating no expiration of its own but reporting when its content last changed is reused for a fraction of
  * the interval it had already gone unchanged, so that a stable resource is held longer than a churning one and reuse
@@ -74,7 +55,40 @@ export const Heuristic: readonly number[] = [
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
  */
-export const Fraction: number = 0.1;
+const Fraction: number = 0.1;
+
+
+/**
+ * The methods whose exchanges may be answered from the store.
+ */
+const Replayable: readonly string[] = [
+	GET,
+	HEAD
+];
+
+/**
+ * The status codes that allow a freshness lifetime to be assumed for a response stating none.
+ *
+ * A response with any other status code and no expiration of its own is never reused, forced or not, however long a
+ * freshness the consumer is willing to assume, as RFC 9110 reserves heuristic freshness to these status codes.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-15.1 RFC 9110 § 15.1 - Overview of Status Codes}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
+ */
+const Cacheable: readonly number[] = [
+	OK,
+	NonAuthoritativeInformation,
+	NoContent,
+	PartialContent,
+	MultipleChoices,
+	MovedPermanently,
+	PermanentRedirect,
+	NotFound,
+	MethodNotAllowed,
+	Gone,
+	URITooLong,
+	NotImplemented
+];
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -245,19 +259,32 @@ export function createStore(store: number | Bucket | Store): Store {
  *
  * @param patterns The glob patterns selecting the targets
  *
- * @returns A test reporting true for a target any of `patterns` selects; false otherwise, as for every target when
- *     `patterns` is empty
+ * @returns A test returning true for a target any of `patterns` selects, and false otherwise or for empty `patterns`
  */
-export function skipping(patterns: readonly string[]): (target: string) => boolean {
+export function matching(patterns: readonly string[]): (target: string) => boolean {
 
-	const skipped = patterns.map(glob);
+	const selected = patterns.map(glob);
 
-	return target => skipped.some(pattern => pattern.test(target));
+	return target => selected.some(pattern => pattern.test(target));
 
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Checks if an exchange may be answered from the store.
+ *
+ * @param method The uppercase method of the exchange
+ *
+ * @returns true if an exchange using `method` may be answered from the store; false if it is to be relayed as an
+ *     unsafe exchange
+ */
+export function safe(method: string): boolean {
+
+	return Replayable.includes(method);
+
+}
 
 /**
  * Computes the cache key of a resource, under the method the exchange uses.
@@ -324,18 +351,24 @@ export function conditional(request: Request, entry?: Entry): Request {
 /**
  * Checks if a response may be held for replay.
  *
- * @param response The response to be held
+ * A forced response is held even where it sets a cookie or states `no-store`. It is still given up where it is
+ * unsuccessful, partial or varies unpredictably, as forcing settles whether a response may be reused, not which
+ * requests it answers. Its cookie belongs to its own exchange, so the caller must drop it from the entry it holds.
  *
- * @returns true if `response` is complete and the origin server allows it to be reused; false otherwise
+ * @param response The response to be held
+ * @param forced Whether the consumer overrides the caching directives the origin server states for `response`
+ *
+ * @returns true if `response` is complete, varies predictably and the origin server allows it to be reused, its cookie
+ *     and any `no-store` directive both disregarded where `forced`; false otherwise
  */
-export function storable(response: Response): boolean {
+export function storable(response: Response, forced: boolean = false): boolean {
 
 	return response.ok // an unsuccessful response states nothing to replay
 		&& response.status !== PartialContent // a partial response holds part of the content alone
-		&& !response.headers.has("set-cookie") // a cookie is set for the exchange that retrieved it alone
-		&& !parseList(response.headers.get("cache-control")).some(directive =>
+		&& (forced || !response.headers.has("set-cookie")) // a cookie is set for the exchange that retrieved it alone
+		&& (forced || !parseList(response.headers.get("cache-control")).some(directive =>
 			parseParameter(directive)[0] === "no-store" // a response the origin server holds back
-		)
+		))
 		&& response.headers.get("vary") !== "*"; // an unpredictably varying response is never answered by an entry
 
 }
@@ -363,7 +396,7 @@ export function stale(response: Response, target: URL): readonly string[] {
 		.filter(url => url.origin === target.origin)
 	];
 
-	return targets.flatMap(url => Safe.map(method => resource(url.href, method)));
+	return targets.flatMap(url => Replayable.map(method => resource(url.href, method)));
 
 }
 
@@ -429,50 +462,49 @@ export function age({ requested, headers }: Entry): number {
  * Directives stating who may hold a response rather than for how long, `public`, `private` and `immutable` among them,
  * leave the expiration unstated, as does a `Last-Modified` field carrying no usable instant.
  *
- * A freshness is assumed for the {@link Heuristic} status codes alone, so that an entry stating no expiration under any
+ * A freshness is assumed for the {@link Cacheable} status codes alone, so that an entry stating no expiration under any
  * other status code is never reused.
+ *
+ * A forced entry is measured as though the origin server stated no expiration. Its `Cache-Control` directives and its
+ * `Expires` field are ignored, so the freshness the consumer assumes prevails over a request for revalidation.
  *
  * @param entry The entry to be measured
  * @param ttl The freshness to be assumed where `entry` reports neither an expiration nor a change time and the cap on
  *     any freshness derived from what it does report, in milliseconds, removed by a value less than or equal to `0`
+ * @param forced Whether the consumer overrides the expiration the origin server states for `entry`
  *
- * @returns The time `entry` stays usable from the instant the origin server generated its content, in milliseconds:
- *     the expiration it states, capped by `ttl`, or, under one of the {@link Heuristic} status codes, a
- *     {@link Fraction} of the interval its content had gone unchanged, capped by `ttl`, or `ttl` itself where no
- *     usable `Last-Modified` is reported, and `0` where no expiration is stated under any other status code
+ * @returns The time `entry` stays usable from the instant the origin server generated its content, in milliseconds,
+ *     capped by a positive `ttl`: the expiration it states, unless `forced`; failing that, under one of the
+ *     {@link Cacheable} status codes, a {@link Fraction} of the interval its content had gone unchanged, or `ttl`
+ *     itself where no usable `Last-Modified` is reported; and `0` under any other status code
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.1 RFC 9111 § 4.2.1 - Calculating Freshness Lifetime}
  * @see {@link https://www.rfc-editor.org/rfc/rfc9111#section-4.2.2 RFC 9111 § 4.2.2 - Calculating Heuristic Freshness}
  */
-export function lifetime({ status, received, headers }: Entry, ttl: number): number {
+export function lifetime({ status, received, headers }: Entry, ttl: number, forced: boolean = false): number {
 
 	const control=new Map(parseList(headers["cache-control"]).map(parseParameter));
+
+	// `Expires` and `Last-Modified` state instants, so the intervals they imply are measured up to the instant the
+	// response was generated, as the origin server states it, falling back to the instant it was received
+
+	const date=parseInstant(headers["date"]) ?? received;
+	const modified=parseInstant(headers["last-modified"]);
 
 	// an expiration is stated where a directive or the field is present, however it parses, so that an origin server
 	// asking for revalidation is never overridden by a freshness the consumer assumes
 
-	// `Expires` states an instant, so its lifetime is measured from the instant the response was generated, as the
-	// origin server states it, falling back to the instant it was received where it states none
+	const stated=forced ? undefined
+		: control.has("no-cache") || control.has("must-revalidate") || control.has("proxy-revalidate") ? 0
+			: control.has("max-age") ? parseDuration(control.get("max-age")) ?? 0
+				: headers["expires"] !== undefined ? Math.max(0, (parseInstant(headers["expires"]) ?? 0)-date)
+					: undefined;
 
-	const date=parseInstant(headers["date"]) ?? received;
+	const assumed=Math.max(0, modified === undefined ? ttl : (date-modified)*Fraction);
 
-	const stated=control.has("no-cache") || control.has("must-revalidate") || control.has("proxy-revalidate") ? 0
-		: control.has("max-age") ? parseDuration(control.get("max-age")) ?? 0
-			: headers["expires"] !== undefined
-				? Math.max(0, (parseInstant(headers["expires"]) ?? 0)-date)
-				: undefined;
+	const freshness=stated ?? (Cacheable.includes(status) ? assumed : 0);
 
-	// `Last-Modified` states an instant, so the interval it went unchanged for is measured up to the instant the
-	// response was generated, as the origin server states it, matching how the lifetime `Expires` states is measured
-
-	const modified=parseInstant(headers["last-modified"]);
-
-	const assumed=modified === undefined ? Math.max(0, ttl)
-		: Math.max(0, (date-modified)*Fraction);
-
-	return stated !== undefined ? (ttl > 0 ? Math.min(stated, ttl) : stated)
-		: Heuristic.includes(status) ? (ttl > 0 ? Math.min(assumed, ttl) : assumed)
-			: 0;
+	return ttl > 0 ? Math.min(freshness, ttl) : freshness;
 
 }
 

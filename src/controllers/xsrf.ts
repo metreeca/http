@@ -38,7 +38,7 @@
  * @see {@link https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html OWASP - Cross-Site Request Forgery Prevention}
  */
 
-import type { Middleware } from "../index.js";
+import { GET, HEAD, type Middleware, OPTIONS, TRACE } from "../index.js";
 import { headers } from "./headers.js";
 
 
@@ -59,7 +59,7 @@ const TokenPattern=/(?:^|;)\s*XSRF-TOKEN\s*=\s*"?([^\s,;\\"]*)"?/;
 /**
  * The set of safe HTTP methods, which carry no protection field.
  */
-const SafeMethods: ReadonlySet<string>=new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+const SafeMethods: ReadonlySet<string>=new Set([GET, HEAD, OPTIONS, TRACE]);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

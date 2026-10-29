@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { Some } from "@metreeca/core/arrays";
 import type { Bucket } from "@metreeca/core/bucket";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import {
@@ -42,7 +43,8 @@ import {
 	refresh,
 	replay,
 	resource,
-	skipping,
+	matching,
+	safe,
 	stale,
 	storable,
 	type Store,
@@ -676,10 +678,10 @@ describe("cache()", () => {
 
 		});
 
-		it("should relay the exchanges a skipped pattern selects", async () => {
+		it("should relay the exchanges an avoided pattern selects", async () => {
 
 			const mock = serving(fresh(60, "stored"), fresh(60, "updated"));
-			const client = cache({ skip: "https://api.example.com/**" })(mock);
+			const client = cache({ avoid: "https://api.example.com/**" })(mock);
 
 			await client(url);
 
@@ -689,10 +691,10 @@ describe("cache()", () => {
 
 		});
 
-		it("should relay the exchanges any of several skipped patterns selects", async () => {
+		it("should relay the exchanges any of several avoided patterns selects", async () => {
 
 			const mock = serving(fresh(60, "stored"), fresh(60, "updated"));
-			const client = cache({ skip: [ "https://api.example.com/other", url ] })(mock);
+			const client = cache({ avoid: [ "https://api.example.com/other", url ] })(mock);
 
 			await client(url);
 
@@ -702,10 +704,10 @@ describe("cache()", () => {
 
 		});
 
-		it("should cache the exchanges no skipped pattern selects", async () => {
+		it("should cache the exchanges no avoided pattern selects", async () => {
 
 			const mock = serving(fresh(60, "stored"));
-			const client = cache({ skip: "https://api.example.com/other" })(mock);
+			const client = cache({ avoid: "https://api.example.com/other" })(mock);
 
 			await client(url);
 
@@ -715,7 +717,7 @@ describe("cache()", () => {
 
 		});
 
-		it("should invalidate the entries a skipped unsafe exchange reports as changed", async () => {
+		it("should invalidate the entries an avoided unsafe exchange reports as changed", async () => {
 
 			const other = "https://api.example.com/other";
 
@@ -725,7 +727,7 @@ describe("cache()", () => {
 				fresh(60, "updated")
 			);
 
-			const client = cache({ skip: url })(mock);
+			const client = cache({ avoid: url })(mock);
 
 			await client(other);
 			await client(url, { method: "DELETE" });
@@ -733,6 +735,187 @@ describe("cache()", () => {
 			await expect(text(client(other))).resolves.toBe("updated");
 
 			expect(mock).toHaveBeenCalledTimes(3);
+
+		});
+
+	});
+
+	describe("forced targets", () => {
+
+		/**
+		 * Creates a response forbidding caching as a source holding back every response does, stating no validator.
+		 */
+		function forbidden(body: BodyInit | null = "stored", headers: Readonly<Record<string, string>> = {}): Response {
+
+			return new Response(body, {
+				headers: {
+					"Cache-Control": "no-cache, no-store",
+					Pragma: "no-cache",
+					Expires: "-1",
+					"Set-Cookie": "session=token",
+					...headers
+				}
+			});
+
+		}
+
+		/**
+		 * Creates a client forcing the given patterns under the given ttl.
+		 */
+		function forcing(fetch: Fetch, force: Some<string> = url, ttl: number = 60_000): Fetch {
+
+			return cache({ ttl, force })(fetch);
+
+		}
+
+
+		it("should answer from the store a forced response the origin server holds back", async () => {
+
+			const mock = serving(forbidden("stored"), forbidden("updated"));
+			const client = forcing(mock);
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			expect(mock).toHaveBeenCalledOnce();
+
+		});
+
+		it("should assume the ttl as the freshness of a forced response", async () => {
+
+			const mock = serving(forbidden("stored"), forbidden("updated"));
+			const client = forcing(mock);
+
+			await client(url);
+
+			vi.advanceTimersByTime(30_000);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			vi.advanceTimersByTime(31_000);
+
+			await expect(text(client(url))).resolves.toBe("updated");
+
+			expect(mock).toHaveBeenCalledTimes(2);
+
+		});
+
+		it("should prefer the ttl to a shorter expiration a forced response states", async () => {
+
+			const mock = serving(fresh(30, "stored"), fresh(30, "updated"));
+			const client = forcing(mock);
+
+			await client(url);
+
+			vi.advanceTimersByTime(45_000);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			expect(mock).toHaveBeenCalledOnce();
+
+		});
+
+		it("should relay the cookie a forced response sets", async () => {
+
+			const client = forcing(serving(forbidden()));
+
+			await expect(client(url).then(response => response.headers.get("Set-Cookie"))).resolves.toBe("session=token");
+
+		});
+
+		it("should not replay the cookie a forced response sets", async () => {
+
+			const mock = serving(forbidden());
+			const client = forcing(mock);
+
+			await client(url);
+
+			await expect(client(url).then(response => response.headers.has("Set-Cookie"))).resolves.toBe(false);
+
+			expect(mock).toHaveBeenCalledOnce();
+
+		});
+
+		it("should not store a forced response varying unpredictably", async () => {
+
+			const mock = serving(forbidden("stored", { Vary: "*" }), forbidden("updated"));
+			const client = forcing(mock);
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("updated");
+
+			expect(mock).toHaveBeenCalledTimes(2);
+
+		});
+
+		it("should tell apart the variants of a forced response", async () => {
+
+			const mock = serving(forbidden("json", { Vary: "Accept" }), forbidden("text", { Vary: "Accept" }));
+			const client = forcing(mock);
+
+			await client(url, { headers: { Accept: "application/json" } });
+			await client(url, { headers: { Accept: "text/plain" } });
+
+			await expect(text(client(url, { headers: { Accept: "application/json" } }))).resolves.toBe("json");
+			await expect(text(client(url, { headers: { Accept: "text/plain" } }))).resolves.toBe("text");
+
+			expect(mock).toHaveBeenCalledTimes(2);
+
+		});
+
+		it("should force the exchanges any of several forced patterns selects", async () => {
+
+			const mock = serving(forbidden("stored"));
+			const client = forcing(mock, [ "https://api.example.com/other", url ]);
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			expect(mock).toHaveBeenCalledOnce();
+
+		});
+
+		it("should honour the directives of the exchanges no forced pattern selects", async () => {
+
+			const mock = serving(forbidden("stored"), forbidden("updated"));
+			const client = forcing(mock, "https://api.example.com/other");
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("updated");
+
+			expect(mock).toHaveBeenCalledTimes(2);
+
+		});
+
+		it("should relay the exchanges both an avoided and a forced pattern select", async () => {
+
+			const mock = serving(fresh(60, "stored"), fresh(60, "updated"));
+			const client = cache({ ttl: 60_000, avoid: url, force: "https://api.example.com/**" })(mock);
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("updated");
+
+			expect(mock).toHaveBeenCalledTimes(2);
+
+		});
+
+		it("should revalidate a forced response on every exchange with no ttl and no `Last-Modified`", async () => {
+
+			const mock = serving(forbidden("stored", { ETag: "\"v1\"" }), unmodified());
+			const client = forcing(mock, url, 0);
+
+			await client(url);
+
+			await expect(text(client(url))).resolves.toBe("stored");
+
+			const [ , [ input ] ] = mock.mock.calls;
+
+			expect(new Request(input).headers.get("If-None-Match")).toBe("\"v1\"");
 
 		});
 
@@ -810,65 +993,85 @@ describe("createStore()", () => {
 
 });
 
-describe("skipping()", () => {
+describe("matching()", () => {
 
-	it("should skip no target for no pattern", async () => {
+	it("should select no target for no pattern", async () => {
 
-		expect(skipping([])(url)).toBe(false);
-
-	});
-
-	it("should skip a target a pattern states in full", async () => {
-
-		expect(skipping([ url ])(url)).toBe(true);
+		expect(matching([])(url)).toBe(false);
 
 	});
 
-	it("should skip a target any of several patterns selects", async () => {
+	it("should select a target a pattern states in full", async () => {
 
-		expect(skipping([ "https://api.example.com/other", url ])(url)).toBe(true);
+		expect(matching([ url ])(url)).toBe(true);
+
+	});
+
+	it("should select a target any of several patterns selects", async () => {
+
+		expect(matching([ "https://api.example.com/other", url ])(url)).toBe(true);
 
 	});
 
 	it("should take the whole target rather than a prefix of it", async () => {
 
-		expect(skipping([ "https://api.example.com" ])(url)).toBe(false);
+		expect(matching([ "https://api.example.com" ])(url)).toBe(false);
 
 	});
 
 	it("should select any run of characters within a path segment with `*`", async () => {
 
-		expect(skipping([ "https://api.example.com/*" ])(url)).toBe(true);
+		expect(matching([ "https://api.example.com/*" ])(url)).toBe(true);
 
 	});
 
 	it("should stop `*` at a path separator", async () => {
 
-		expect(skipping([ "https://api.example.com/*" ])(`${url}/1`)).toBe(false);
+		expect(matching([ "https://api.example.com/*" ])(`${url}/1`)).toBe(false);
 
 	});
 
 	it("should select any run of characters across path separators with `**`", async () => {
 
-		expect(skipping([ "https://api.example.com/**" ])(`${url}/1`)).toBe(true);
+		expect(matching([ "https://api.example.com/**" ])(`${url}/1`)).toBe(true);
 
 	});
 
 	it("should select one character within a path segment with `?`", async () => {
 
-		expect(skipping([ "https://api.example.com/dat?" ])(url)).toBe(true);
+		expect(matching([ "https://api.example.com/dat?" ])(url)).toBe(true);
 
 	});
 
 	it("should stop `?` at a path separator", async () => {
 
-		expect(skipping([ "https://api.example.com/data?1" ])(`${url}/1`)).toBe(false);
+		expect(matching([ "https://api.example.com/data?1" ])(`${url}/1`)).toBe(false);
 
 	});
 
 	it("should take the characters a regular expression reads as operators literally", async () => {
 
-		expect(skipping([ "https://api.example.com/d.ta" ])(url)).toBe(false);
+		expect(matching([ "https://api.example.com/d.ta" ])(url)).toBe(false);
+
+	});
+
+});
+
+describe("safe()", () => {
+
+	it("should accept the methods answered from the store", async () => {
+
+		expect(safe("GET")).toBe(true);
+		expect(safe("HEAD")).toBe(true);
+
+	});
+
+	it("should reject mutating methods", async () => {
+
+		expect(safe("POST")).toBe(false);
+		expect(safe("PUT")).toBe(false);
+		expect(safe("PATCH")).toBe(false);
+		expect(safe("DELETE")).toBe(false);
 
 	});
 
@@ -1040,6 +1243,41 @@ describe("storable()", () => {
 	it("should hold a response varying on a header field", async () => {
 
 		expect(storable(new Response("stored", { headers: { Vary: "Accept" } }))).toBe(true);
+
+	});
+
+
+	describe("when forced", () => {
+
+		it("should hold a response setting a cookie", async () => {
+
+			expect(storable(new Response("stored", { headers: { "Set-Cookie": "session=token" } }), true)).toBe(true);
+
+		});
+
+		it("should hold a response stating `no-store`", async () => {
+
+			expect(storable(new Response("stored", { headers: { "Cache-Control": "no-store" } }), true)).toBe(true);
+
+		});
+
+		it("should give up an unsuccessful response", async () => {
+
+			expect(storable(new Response("stored", { status: InternalServerError }), true)).toBe(false);
+
+		});
+
+		it("should give up a partial response", async () => {
+
+			expect(storable(new Response("stored", { status: PartialContent }), true)).toBe(false);
+
+		});
+
+		it("should give up a response varying unpredictably", async () => {
+
+			expect(storable(new Response("stored", { headers: { Vary: "*" } }), true)).toBe(false);
+
+		});
 
 	});
 
@@ -1402,6 +1640,51 @@ describe("lifetime()", () => {
 			"should report no freshness lifetime for a %i entry", async status => {
 
 				expect(lifetime(entry({ status, headers: { "last-modified": modified } }), 0)).toBe(0);
+
+			});
+
+	});
+
+	describe("when forced", () => {
+
+		const modified = new Date(at-600_000).toUTCString();
+
+		it.each([ "no-cache", "max-age=0", "max-age=30", "must-revalidate", "proxy-revalidate" ])(
+			"should assume the ttl in place of the expiration <%s> states", async control => {
+
+				expect(lifetime(entry({ headers: { "cache-control": control } }), 60_000, true)).toBe(60_000);
+
+			});
+
+		it("should assume the ttl in place of the expiration `Expires` states", async () => {
+
+			expect(lifetime(entry({ headers: { expires: "-1" } }), 60_000, true)).toBe(60_000);
+
+		});
+
+		it("should cap a longer expiration under the ttl", async () => {
+
+			expect(lifetime(entry({ headers: { "cache-control": "max-age=600" } }), 60_000, true)).toBe(60_000);
+
+		});
+
+		it("should assume a share of the time the content had gone unchanged in place of a stated expiration", async () => {
+
+			expect(lifetime(entry({ headers: { "cache-control": "no-cache", "last-modified": modified } }), 0, true))
+				.toBe(60_000);
+
+		});
+
+		it("should report no freshness lifetime with no ttl and no `Last-Modified`", async () => {
+
+			expect(lifetime(entry({ headers: { "cache-control": "max-age=600" } }), 0, true)).toBe(0);
+
+		});
+
+		it.each([ Created, Accepted, ResetContent ])(
+			"should report no freshness lifetime for a %i entry", async status => {
+
+				expect(lifetime(entry({ status, headers: { "cache-control": "max-age=600" } }), 60_000, true)).toBe(0);
 
 			});
 

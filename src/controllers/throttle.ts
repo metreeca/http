@@ -42,7 +42,7 @@
 
 import { createThrottle } from "@metreeca/core/async";
 import { parseInstant, parseDuration } from "../index.core.js";
-import type { Fetch, Middleware } from "../index.js";
+import { type Fetch, InternalServerError, type Middleware, RequestTimeout, TooManyRequests } from "../index.js";
 import type { Problem } from "./success.js";
 
 
@@ -145,7 +145,7 @@ export function throttle({ attempts = 1, ...options }: Parameters<typeof createT
 
 		function transient({ status }: Response): boolean { // that is, a failure the server may recover from
 
-			return status === 408 || status === 429 || status >= 500;
+			return status === RequestTimeout || status === TooManyRequests || status >= InternalServerError;
 
 		}
 
