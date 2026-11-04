@@ -11,6 +11,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `@metreeca/http/cache` `force` option, caching the targets it selects whatever caching directives the origin server
   states, so that a source forbidding caching on every response is reused under the freshness `ttl` assumes
+- `NetworkError` constant naming the status `0` the Fetch Standard assigns to network errors, carried by the problems
+  `@metreeca/http/success` raises and by the responses `@metreeca/http/monitor` answers failed exchanges with
 
 ### Changed
 

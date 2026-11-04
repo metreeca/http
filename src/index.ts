@@ -27,7 +27,8 @@
  * reads as intent rather than as bare literals. Method coverage is complete for the methods defined by RFC 9110 § 9,
  * extended with `PATCH` from RFC 5789. Status code coverage is complete for the codes defined by RFC 9110 § 15,
  * extended with the registered codes in common use defined by later specifications; placeholders reserved without a
- * name and codes registered by narrower protocol extensions are left out and compared as plain numbers.
+ * name and codes registered by narrower protocol extensions are left out and compared as plain numbers. The status `0`
+ * the Fetch Standard assigns to responses no origin server answered is named as well, as {@link NetworkError}.
  *
  * Parsing helpers turn the textual field values HTTP exchanges are made of into plain JavaScript ones, sparing each
  * call site the splitting, unquoting and date conversion the field grammars call for. Malformed input is reported as
@@ -243,6 +244,21 @@ export const TRACE = "TRACE";
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * No origin server assigned a status to the exchange.
+ *
+ * Not an HTTP status code: the Fetch Standard assigns it to network errors, such as those returned by
+ * {@link https://developer.mozilla.org/docs/Web/API/Response/error_static `Response.error()`}. Opaque responses carry
+ * it as well, because their actual status is withheld from scripts; `response.type` tells the two cases apart.
+ *
+ * @group Network Errors
+ *
+ * @see {@link https://fetch.spec.whatwg.org/#concept-network-error WHATWG Fetch Standard - Network Error}
+ * @see {@link https://fetch.spec.whatwg.org/#concept-filtered-response-opaque WHATWG Fetch Standard - Opaque Response}
+ */
+export const NetworkError = 0;
+
 
 /**
  * The initial part of the request was received and not yet rejected.

@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it, type Mock, vi } from "vitest";
-import { type Fetch, InternalServerError } from "../index.js";
+import { type Fetch, InternalServerError, NetworkError } from "../index.js";
 import { monitor } from "./monitor.js";
 
 
@@ -78,6 +78,7 @@ describe("monitor()", () => {
 			const response = await monitor(recording())(serving())("not a URL");
 
 			expect(response.type).toBe("error");
+			expect(response.status).toBe(NetworkError);
 
 		});
 
@@ -281,6 +282,7 @@ describe("monitor()", () => {
 			const response = await monitor(recording())(failing(new TypeError("network error")))(url);
 
 			expect(response.type).toBe("error");
+			expect(response.status).toBe(NetworkError);
 
 		});
 
@@ -396,6 +398,7 @@ describe("monitor()", () => {
 			const response = await monitor({})(serving())("not a URL");
 
 			expect(response.type).toBe("error");
+			expect(response.status).toBe(NetworkError);
 
 		});
 
@@ -406,6 +409,7 @@ describe("monitor()", () => {
 			const response = await monitor({})(failing)(url);
 
 			expect(response.type).toBe("error");
+			expect(response.status).toBe(NetworkError);
 
 		});
 

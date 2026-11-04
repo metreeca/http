@@ -62,8 +62,9 @@ const URLClipLimit = 80;
  * Every entry opens with the method and the target URL of the exchange, the method reported in uppercase and the URL
  * clipped so that entries stay uniform and on a single line, and states the outcome once the response is in:
  *
- * - **Request states a malformed URL** (only a raw string may): reported to `logger.warn` and answered with a network
- *   error {@link https://developer.mozilla.org/docs/Web/API/Response/error `Response`}, without being sent
+ * - **Request states a malformed URL** (only a raw string may): reported to `logger.warn` and answered without being
+ *   sent, with a network error {@link https://developer.mozilla.org/docs/Web/API/Response/error `Response`} whose
+ *   `status` is {@link index!NetworkError NetworkError}, the same answer a failed exchange receives
  * - **Request is sent**: reported to `logger.info`
  * - **Response is not `ok`** (non-2xx `status`): its `status` and `statusText` are reported to `logger.warn`
  * - **Response is `ok`** (2xx `status`) and served from a cache: its `status` is reported to `logger.info`, alongside a

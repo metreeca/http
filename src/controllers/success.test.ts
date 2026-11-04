@@ -15,6 +15,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import { NetworkError } from "../index.js";
 import { isProblem, type Problem, success, toProblem } from "./success.js";
 
 
@@ -81,7 +82,7 @@ describe("toProblem()", () => {
 		const error = new Error("Network error", { cause: new TypeError("Failed to fetch") });
 
 		expect(toProblem(error)).toStrictEqual({
-			status: 0,
+			status: NetworkError,
 			title: "Error",
 			detail: "Network error"
 		});
@@ -91,14 +92,14 @@ describe("toProblem()", () => {
 		["an object", { balance: 30 }],
 		["a scalar", "Network error"]
 	])("should carry %s as report", (_, value) => {
-		expect(toProblem(value)).toEqual({ status: 0, report: value });
+		expect(toProblem(value)).toEqual({ status: NetworkError, report: value });
 	});
 
 	it.each([
 		["undefined", undefined, "undefined"],
 		["a function", () => undefined, "() => undefined"]
 	])("should render %s as detail", (_, value, detail) => {
-		expect(toProblem(value)).toEqual({ status: 0, detail });
+		expect(toProblem(value)).toEqual({ status: NetworkError, detail });
 	});
 
 	it("should return an immutable problem", () => {
@@ -142,14 +143,14 @@ describe("success()", () => {
 
 	describe("fetch exceptions", () => {
 
-		it("should reject with Problem status 0 when fetch throws", async () => {
+		it("should reject with a NetworkError problem when fetch throws", async () => {
 			const mockFetch = vi.fn<typeof fetch>().mockRejectedValue(new Error("Network error"));
 			const guard = success()(mockFetch);
 
 			await expect(guard("https://api.example.com/data"))
 				.rejects
 				.toMatchObject({
-					status: 0,
+					status: NetworkError,
 					detail: "fetch error <Error: Network error>"
 				});
 		});
@@ -189,7 +190,7 @@ describe("success()", () => {
 			await expect(guard("https://api.example.com/data"))
 				.rejects
 				.toMatchObject({
-					status: 0,
+					status: NetworkError,
 					detail: "fetch error <TypeError: Failed to fetch>"
 				});
 		});
