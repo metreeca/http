@@ -13,6 +13,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   states, so that a source forbidding caching on every response is reused under the freshness `ttl` assumes
 - `NetworkError` constant naming the status `0` the Fetch Standard assigns to network errors, carried by the problems
   `@metreeca/http/success` raises and by the responses `@metreeca/http/monitor` answers failed exchanges with
+- `getMedia()` request accessor identifying the media type of a target by its file extension, with caller-supplied
+  types taking precedence and the wildcard media range standing in for an unknown one, ready for an `Accept` header
 
 ### Changed
 

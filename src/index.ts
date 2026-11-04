@@ -78,14 +78,15 @@
  * const response = await client("https://api.example.com/data");
  * ```
  *
- * The request accessors report what an exchange states, wherever it is stated, so that a bare target, a `Request` and
- * a target paired with options are all read alike:
+ * The request accessors read the method, target, media type and header fields of an exchange wherever they are
+ * stated, so that a bare target, a `Request` and a target paired with options are all handled alike:
  *
  * ```typescript
- * import { getHeaders, getMethod, getTarget } from "@metreeca/http";
+ * import { getHeaders, getMedia, getMethod, getTarget } from "@metreeca/http";
  *
  * getMethod("https://api.example.com/data", { method: "post" }); // "POST"
  * getTarget("https://api.example.com/data#section").href; // "https://api.example.com/data"
+ * getMedia("https://api.example.com/data.json"); // "application/json"
  * getHeaders(new Request("https://api.example.com/data", { headers: { Accept: "text/plain" } })); // Headers
  * ```
  *

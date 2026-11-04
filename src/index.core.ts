@@ -18,8 +18,8 @@
  * Request and field value parsing helpers.
  *
  * Converts the textual values HTTP exchanges are made of into the plain JavaScript values client code works with:
- * request methods, target URIs and header fields, instants and durations, quoted strings, comma-separated lists, and
- * the parameterised items and name / value pairs that field grammars are assembled from.
+ * request methods, target URIs and their media types, header fields, instants and durations, quoted strings,
+ * comma-separated lists, and the parameterised items and name / value pairs that field grammars are assembled from.
  *
  * Malformed input is reported as stated or as missing, never as an error, so the consumer decides how to handle
  * whatever a peer got wrong.
@@ -30,6 +30,7 @@
  */
 
 import { Nullable } from "@metreeca/core";
+import { immutable } from "@metreeca/core/values";
 
 
 /**
@@ -37,7 +38,7 @@ import { Nullable } from "@metreeca/core";
  *
  * @see {@link https://fetch.spec.whatwg.org/#concept-method-normalize Fetch - Method Normalization}
  */
-const Methods: ReadonlyArray<string> = [ "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT" ];
+const Methods: ReadonlyArray<string> = ["DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT"];
 
 /**
  * The fragment of a target, if any, together with the hash mark introducing it.
@@ -45,6 +46,13 @@ const Methods: ReadonlyArray<string> = [ "DELETE", "GET", "HEAD", "OPTIONS", "PO
  * @see {@link https://www.rfc-editor.org/rfc/rfc3986#section-3.5 RFC 3986 § 3.5 - Fragment}
  */
 const FragmentPattern = /#.*$/su;
+
+/**
+ * The extension of the file a path names, captured without its dot.
+ *
+ * A dot opening the file name marks a hidden file rather than an extension, so `.profile` has none.
+ */
+const ExtensionPattern = /[^/]\.([^./]+)$/;
 
 
 /**
@@ -74,7 +82,7 @@ const Months: ReadonlyArray<string> = [
 /**
  * The length of each month, in days, February taken as common and corrected for a leap year where required.
  */
-const MonthDays: ReadonlyArray<number> = [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+const MonthDays: ReadonlyArray<number> = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 /**
  * The span of a Gregorian cycle, in years, after which the calendar repeats exactly.
@@ -175,6 +183,33 @@ const ItemPattern = /^((?:"(?:[^"\\]|\\.)*"|[^;])*)(.*)$/s;
 const ParametersPattern = /(?:"(?:[^"\\]|\\.)*"|[^;])+/g;
 
 
+/**
+ * The default media types, keyed by lowercase extension, covering the textual formats a site commonly serves.
+ *
+ * @see {@link https://www.iana.org/assignments/media-types/ IANA - Media Types}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9512 RFC 9512 - YAML Media Type}
+ */
+const MediaTypes = immutable<{ readonly [extension: string]: string }>({
+
+	txt: "text/plain",
+	md: "text/markdown",
+	markdown: "text/markdown",
+	html: "text/html",
+	htm: "text/html",
+
+	csv: "text/csv",
+	tsv: "text/tab-separated-values",
+
+	json: "application/json",
+	yaml: "application/yaml",
+	yml: "application/yaml",
+	xml: "application/xml",
+
+	svg: "image/svg+xml"
+
+});
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -227,6 +262,43 @@ export function getMethod(input: RequestInfo | URL, init?: RequestInit): string 
 export function getTarget(input: RequestInfo | URL): URL {
 
 	return new URL((input instanceof Request ? input.url : input.toString()).replace(FragmentPattern, ""));
+
+}
+
+/**
+ * Retrieves the media type of the target of a request.
+ *
+ * > [!NOTE]
+ * > The media type is identified the way a static server identifies it, by the extension of the file the target
+ * > names. Extensions are matched case-insensitively, and the query and the fragment are ignored. A path ending in a
+ * > slash names no file, and a hidden file such as `.profile` has no extension.
+ * >
+ * > The default media types cover the textual formats a site commonly serves, YAML included under the type RFC 9512
+ * > registers. Media types stated by `types` take precedence, so a caller may add an extension or remap a known one.
+ * >
+ * > A target with no known extension is assigned the wildcard media range, which matches any media type. The returned
+ * > type is therefore always a valid media range, ready to be stated as is in the `Accept` header of a request.
+ *
+ * @param input The request or target URL the media type is to be retrieved from
+ * @param types The extra media types, keyed by lowercase extension, taking precedence over the default ones
+ *
+ * @returns The media type of the extension of the file the target names, or the wildcard media range if the target
+ *     names no file, or a file whose extension is missing or listed neither by `types` nor by the defaults
+ *
+ * @throws {@link !TypeError TypeError} If `input` states a target that is not an absolute URI
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-8.3.1 RFC 9110 § 8.3.1 - Media Type}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110#section-12.5.1 RFC 9110 § 12.5.1 - Accept}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9512 RFC 9512 - YAML Media Type}
+ */
+export function getMedia(input: RequestInfo | URL, types: { readonly [extension: string]: string } = {}): string {
+
+	const extension = ExtensionPattern.exec(getTarget(input).pathname)?.[1]?.toLowerCase();
+
+	return extension === undefined ? "*/*"
+		: Object.hasOwn(types, extension) ? types[extension]
+		: Object.hasOwn(MediaTypes, extension) ? MediaTypes[extension]
+		: "*/*";
 
 }
 
@@ -314,7 +386,7 @@ export function parseInstant(value: Nullable<string>): undefined | number {
 
 	if ( suffixed ) {
 
-		const [ , day = "", month = "", year = "", hour = "", minute = "", second = "" ] = suffixed;
+		const [, day = "", month = "", year = "", hour = "", minute = "", second = ""] = suffixed;
 
 		return instant(
 			year.length === 2 ? expand(Number(year)) : Number(year),
@@ -323,7 +395,7 @@ export function parseInstant(value: Nullable<string>): undefined | number {
 
 	} else if ( asctime ) {
 
-		const [ , month = "", day = "", hour = "", minute = "", second = "", year = "" ] = asctime;
+		const [, month = "", day = "", hour = "", minute = "", second = "", year = ""] = asctime;
 
 		return instant(Number(year), month, Number(day), Number(hour), Number(minute), Number(second));
 
@@ -338,10 +410,8 @@ export function parseInstant(value: Nullable<string>): undefined | number {
 	 * Converts the components of an `HTTP-date` to an instant.
 	 */
 	function instant(
-
 		year: number, month: string, day: number,
 		hour: number, minute: number, second: number
-
 	): undefined | number {
 
 		const index = Months.indexOf(month);
@@ -504,9 +574,9 @@ export function parseList(value: Nullable<string>): readonly string[] {
  */
 export function parseParameter(parameter: string): readonly [name: string, value: string] {
 
-	const [ , name = "", value = "" ]=PairPattern.exec(parameter) ?? [];
+	const [, name = "", value = ""] = PairPattern.exec(parameter) ?? [];
 
-	return [ name.toLowerCase(), parseQuoted(value) ];
+	return [name.toLowerCase(), parseQuoted(value)];
 
 }
 
@@ -540,14 +610,13 @@ export function parseParameter(parameter: string): readonly [name: string, value
  */
 export function parseItem(value: Nullable<string>): readonly [value: string, parameters: ReadonlyMap<string, string>] {
 
-	const [ , head = "", tail = "" ]=ItemPattern.exec(value ?? "") ?? [];
+	const [, head = "", tail = ""] = ItemPattern.exec(value ?? "") ?? [];
 
-	return [ parseQuoted(head.trim()), new Map((tail.match(ParametersPattern) ?? [])
+	return [parseQuoted(head.trim()), new Map((tail.match(ParametersPattern) ?? [])
 
 		.map(parameter => parameter.trim())
 		.filter(parameter => parameter !== "")
 		.map(parameter => parseParameter(parameter))
-
-	) ];
+	)];
 
 }

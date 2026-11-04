@@ -17,6 +17,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	getHeaders,
+	getMedia,
 	getMethod,
 	getTarget,
 	parseDuration,
@@ -178,6 +179,107 @@ describe("getTarget()", () => {
 	it("should drop the fragment of a target stated as a URL", async () => {
 
 		expect(getTarget(new URL(`${ url }#section`)).href).toBe(url);
+
+	});
+
+});
+
+describe("getMedia()", () => {
+
+	const base = "https://www.example.com";
+
+	describe("extensions", () => {
+
+		it("should identify the media type of a known extension", async () => {
+
+			expect(getMedia(`${ base }/guide.md`)).toBe("text/markdown");
+
+		});
+
+		it("should match the extension case-insensitively", async () => {
+
+			expect(getMedia(`${ base }/GUIDE.MD`)).toBe("text/markdown");
+
+		});
+
+		it("should identify any media type for an unknown extension", async () => {
+
+			expect(getMedia(`${ base }/data.xyz`)).toBe("*/*");
+
+		});
+
+		it("should take the last extension of a name carrying several", async () => {
+
+			expect(getMedia(`${ base }/data.json.md`)).toBe("text/markdown");
+
+		});
+
+		it.each([
+			"/guide", // a bare name
+			"/data.json/", // a dotted folder
+			"/data.json/guide", // a bare name inside a dotted folder
+			"/.md" // a hidden name
+		])("should identify any media type for <%s>", async path => {
+
+			expect(getMedia(`${ base }${ path }`)).toBe("*/*");
+
+		});
+
+		it("should ignore the query and the fragment", async () => {
+
+			expect(getMedia(`${ base }/guide.md?format=x.json#part.html`)).toBe("text/markdown");
+
+		});
+
+		it("should not take an inherited key for a known extension", async () => {
+
+			expect(getMedia(`${ base }/data.constructor`)).toBe("*/*");
+
+		});
+
+	});
+
+	describe("inputs", () => {
+
+		it("should identify the media type of a target stated as a URL", async () => {
+
+			expect(getMedia(new URL(`${ base }/data.json`))).toBe("application/json");
+
+		});
+
+		it("should identify the media type of a request input", async () => {
+
+			expect(getMedia(new Request(`${ base }/data.json`))).toBe("application/json");
+
+		});
+
+		it("should reject a relative target", async () => {
+
+			expect(() => getMedia("/data.json")).toThrow(TypeError);
+
+		});
+
+	});
+
+	describe("types", () => {
+
+		it("should give precedence to the stated media types", async () => {
+
+			expect(getMedia(`${ base }/guide.md`, { md: "text/x-markdown" })).toBe("text/x-markdown");
+
+		});
+
+		it("should add the stated media types", async () => {
+
+			expect(getMedia(`${ base }/guide.mdx`, { mdx: "text/mdx" })).toBe("text/mdx");
+
+		});
+
+		it("should fall back to the default media types", async () => {
+
+			expect(getMedia(`${ base }/data.json`, { mdx: "text/mdx" })).toBe("application/json");
+
+		});
 
 	});
 
